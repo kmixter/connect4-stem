@@ -1,0 +1,133 @@
+#define TESTING
+#include "board.h"
+#include <gtest/gtest.h>
+
+class BoardTest : public testing::Test {
+ protected:
+  void SetUp() override {
+  }
+
+  Board b_;
+};
+
+TEST_F(BoardTest, Instantiate) {
+}
+
+TEST_F(BoardTest, InitialState) {
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n", b_.ToString());
+}
+
+TEST_F(BoardTest, ErrorRequests) {
+  #if 0
+  EXPECT_EQ(kError, b_.Get(-1, 0))
+  EXPECT_EQ(kError, b_.Get(0, -1));
+  EXPECT_EQ(kError, b_.Get(6, 0));
+  EXPECT_EQ(kError, b_.Get(0, 5));
+  #endif
+}
+
+TEST_F(BoardTest, AddOneRedOk) {
+  EXPECT_EQ(kOk, b_.Add(2, kRedDisc));
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ R _ _ _ _\n", b_.ToString());
+}
+
+TEST_F(BoardTest, AddOneYellowOk) {
+  EXPECT_EQ(kOk, b_.Add(3, kYellowDisc));
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ _ _ _ _ _\n"
+           "_ _ _ Y _ _ _\n", b_.ToString());
+}
+
+TEST_F(BoardTest, SequenceOfAddsAlongBottom) {
+  EXPECT_EQ(kOk, b_.Add(0, kRedDisc));
+  EXPECT_EQ(kOk, b_.Add(1, kYellowDisc));
+  EXPECT_EQ(kOk, b_.Add(2, kRedDisc));
+  EXPECT_EQ(kOk, b_.Add(3, kYellowDisc));
+  EXPECT_EQ(kOk, b_.Add(4, kRedDisc));
+  EXPECT_EQ(kOk, b_.Add(5, kYellowDisc));
+  EXPECT_EQ(kOk, b_.Add(6, kRedDisc));
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "R Y R Y R Y R\n", b_.ToString());
+}
+
+TEST_F(BoardTest, FirstWin) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ R Y _ _ _\n"
+                               "_ _ R Y _ _ _\n"
+                               "_ _ R Y _ _ _\n"));
+  EXPECT_EQ(kWin, b_.Add(2, kRedDisc));
+  int win_row, win_col, win_delta_row, win_delta_col;
+  ASSERT_TRUE(b_.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col));
+  EXPECT_EQ(0, win_row);
+  EXPECT_EQ(2, win_col);
+  EXPECT_EQ(1, win_delta_row);
+  EXPECT_EQ(0, win_delta_col);
+}
+
+TEST_F(BoardTest, HorizontalWin) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ Y Y Y _ _ R\n"
+                               "_ R R R Y _ R\n"));
+  EXPECT_EQ(kWin, b_.Add(4, kYellowDisc));
+  int win_row, win_col, win_delta_row, win_delta_col;
+  ASSERT_TRUE(b_.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col));
+  EXPECT_EQ(1, win_row);
+  EXPECT_EQ(1, win_col);
+  EXPECT_EQ(0, win_delta_row);
+  EXPECT_EQ(1, win_delta_col);
+}
+
+TEST_F(BoardTest, SlashWin) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ R Y _ _\n"
+                               "_ _ R R R _ _\n"
+                               "_ R Y Y Y _ Y\n"));
+  EXPECT_EQ(kWin, b_.Add(4, kRedDisc));
+  int win_row, win_col, win_delta_row, win_delta_col;
+  ASSERT_TRUE(b_.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col));
+  EXPECT_EQ(0, win_row);
+  EXPECT_EQ(1, win_col);
+  EXPECT_EQ(1, win_delta_row);
+  EXPECT_EQ(1, win_delta_col);
+}
+
+TEST_F(BoardTest, BackslashWin) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ Y R Y _ _\n"
+                               "_ _ R R R _ _\n"
+                               "_ R Y Y Y R Y\n"));
+  EXPECT_EQ(kWin, b_.Add(2, kRedDisc));
+  int win_row, win_col, win_delta_row, win_delta_col;
+  ASSERT_TRUE(b_.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col));
+  EXPECT_EQ(0, win_row);
+  EXPECT_EQ(5, win_col);
+  EXPECT_EQ(1, win_delta_row);
+  EXPECT_EQ(-1, win_delta_col);
+}
+
