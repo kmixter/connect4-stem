@@ -23,32 +23,63 @@ TEST_F(BoardTest, InitialState) {
 }
 
 TEST_F(BoardTest, ErrorRequests) {
-  #if 0
-  EXPECT_EQ(kError, b_.Get(-1, 0))
-  EXPECT_EQ(kError, b_.Get(0, -1));
-  EXPECT_EQ(kError, b_.Get(6, 0));
-  EXPECT_EQ(kError, b_.Get(0, 5));
-  #endif
+  EXPECT_EQ((int)kError, (int)b_.Get(-1, 0));
+  EXPECT_EQ((int)kError, (int)b_.Get(0, -1));
+  EXPECT_EQ((int)kError, (int)b_.Get(6, 0));
+  EXPECT_EQ((int)kError, (int)b_.Get(0, 7));
 }
 
 TEST_F(BoardTest, AddOneRedOk) {
   EXPECT_EQ(kOk, b_.Add(2, kRedDisc));
   EXPECT_EQ("_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ R _ _ _ _\n", b_.ToString());
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ R _ _ _ _\n", b_.ToString());
 }
 
 TEST_F(BoardTest, AddOneYellowOk) {
   EXPECT_EQ(kOk, b_.Add(3, kYellowDisc));
   EXPECT_EQ("_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ _ _ _ _ _\n"
-           "_ _ _ Y _ _ _\n", b_.ToString());
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ Y _ _ _\n", b_.ToString());
+}
+
+TEST_F(BoardTest, StackTest) {
+   EXPECT_EQ(kOk, b_.Add(4, kRedDisc));
+   EXPECT_EQ(kOk, b_.Add(4, kYellowDisc));
+   EXPECT_EQ(kOk, b_.Add(4, kRedDisc));
+
+   EXPECT_EQ("_ _ _ _ _ _ _\n"
+             "_ _ _ _ _ _ _\n"
+             "_ _ _ _ _ _ _\n"
+             "_ _ _ _ R _ _\n"
+             "_ _ _ _ Y _ _\n"
+             "_ _ _ _ R _ _\n", b_.ToString());
+
+   EXPECT_EQ(kOk, b_.Add(4, kYellowDisc));
+   EXPECT_EQ(kOk, b_.Add(4, kRedDisc));
+   EXPECT_EQ(kOk, b_.Add(4, kYellowDisc));
+
+   EXPECT_EQ("_ _ _ _ Y _ _\n"
+             "_ _ _ _ R _ _\n"
+             "_ _ _ _ Y _ _\n"
+             "_ _ _ _ R _ _\n"
+             "_ _ _ _ Y _ _\n"
+             "_ _ _ _ R _ _\n", b_.ToString());
+
+   EXPECT_EQ(kIllegal, b_.Add(4, kRedDisc));
+
+   EXPECT_EQ("_ _ _ _ Y _ _\n"
+             "_ _ _ _ R _ _\n"
+             "_ _ _ _ Y _ _\n"
+             "_ _ _ _ R _ _\n"
+             "_ _ _ _ Y _ _\n"
+             "_ _ _ _ R _ _\n", b_.ToString());
 }
 
 TEST_F(BoardTest, SequenceOfAddsAlongBottom) {
@@ -130,4 +161,31 @@ TEST_F(BoardTest, BackslashWin) {
   EXPECT_EQ(1, win_delta_row);
   EXPECT_EQ(-1, win_delta_col);
 }
+
+TEST_F(BoardTest, MiddleOf3DoesntWin) {
+  EXPECT_EQ(kOk, b_.Add(3, kRedDisc));
+  EXPECT_EQ(kOk, b_.Add(1, kRedDisc));
+  EXPECT_EQ(kOk, b_.Add(2, kRedDisc));
+  int win_row, win_col, win_delta_row, win_delta_col;
+  EXPECT_FALSE(b_.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col));
+}
+
+TEST_F(BoardTest, MiddleWin) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ R _ _ _ _\n"
+                               "_ _ Y R _ _ _\n"
+                               "_ _ R Y _ _ _\n"
+                               "_ Y Y R Y R R\n"));
+  EXPECT_EQ(kWin, b_.Add(4, kRedDisc));
+  int win_row, win_col, win_delta_row, win_delta_col;
+  ASSERT_TRUE(b_.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col));
+  EXPECT_EQ(0, win_row);
+  EXPECT_EQ(5, win_col);
+  EXPECT_EQ(1, win_delta_row);
+  EXPECT_EQ(-1, win_delta_col);
+}
+
+// TODO(kmixter): Write a test that makes sure the computer waits for the other
+// person to go.
 

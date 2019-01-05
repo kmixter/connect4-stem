@@ -120,22 +120,30 @@ AddResult Board::Add(int column, CellContents disc) {
   if (top == 5) return kIllegal;
   contents_[top + 1][column] = disc;
   
-  // Check for win.
-  for (int dr = -1; dr < 2; ++dr) {
+  // Check for win caused by our added piece. We test the 4 canonical
+  // directions, counting in both canonical and opposite-canonical directions.
+  for (int dr = 0; dr < 2; ++dr) {
     for (int dc = -1; dc < 2; ++dc) {
-	    int row = top + 1;
-      int col = column;
-
-      if (dr == 0 && dc == 0) continue;
-      int streak;
-      for (streak = 0; streak < 4; ++streak) {
-        if (row > 5 || col > 6) break;
-        if (row < 0 || col < 0) break;
-        if (contents_[row][col] != disc) break;
-        row += dr;
-        col += dc;
+      if (dr == 0 && dc != 1) continue;
+      int streak = -1;  // Start at -1 since we'll count the origin twice.
+    	for (int opposite = 0; opposite < 2; ++opposite) {
+		    int row = top + 1;
+	      int col = column;
+	    	do {
+	        if (row > 5 || col > 6) break;
+	        if (row < 0 || col < 0) break;
+	        if (contents_[row][col] != disc) break;
+	        if (!opposite) {
+		        row += dr;
+	  	      col += dc;
+	  	    } else {
+	  	    	row -= dr;
+	  	    	col -= dc;
+	  	    }
+	  	    ++streak;
+  	    } while (true);
       }
-      if (streak == 4) return kWin;
+      if (streak >= 4) return kWin;
     }
   }
   return kOk;
