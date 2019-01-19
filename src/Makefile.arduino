@@ -1,0 +1,49 @@
+ADIR?=$(HOME)/prj/arduino-1.8.8
+ABINDIR?=$(ADIR)/hardware/tools/avr/bin
+AETCDIR?=$(ADIR)/hardware/tools/avr/etc
+PKG=led
+BIN=$(PKG)
+OBJS=$(PKG).o
+MCU=atmega2560
+
+CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing -MMD -flto -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=10808 -DARDUINO_AVR_MEGA2560 -DARDUINO_ARCH_AVR -I/home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/cores/arduino -I/home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/variants/mega
+CXXFLAGS=$(CFLAGS) -fpermissive -fno-exceptions -std=gnu++11 -fno-threadsafe-statics
+LDFLAGS=-Os -g -flto -fuse-linker-plugin -Wl,--gc-sections,--relax -mmcu=$(MCU) -lm
+
+CORECFILES=wiring_shift.c WInterrupts.c hooks.c wiring.c wiring_analog.c wiring_pulse.c wiring_digital.c
+
+CORECXXFILES=HardwareSerial.cpp HardwareSerial0.cpp HardwareSerial1.cpp USBCore.cpp WMath.cpp HardwareSerial2.cpp HardwareSerial3.cpp WString.cpp main.cpp Tone.cpp new.cpp CDC.cpp abi.cpp IPAddress.cpp Print.cpp Stream.cpp PluggableUSB.cpp
+
+CC=$(ABINDIR)/avr-gcc
+CXX=$(ABINDIR)/avr-g++
+AR=$(ABINDIR)/avr-gcc-ar
+OBJCOPY=$(ABINDIR)/avr-objcopy
+PORT=/dev/ttyACM0
+
+$(BIN).hex: $(BIN).elf
+	$(OBJCOPY) -O ihex $< $@
+
+core.a:
+	for file in $(CORECFILES) ; do \
+		echo "Building C $$file"; \
+		$(CC) $(CFLAGS) -c /home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/cores/arduino/$$file -o $$file.o; \
+		$(AR) rcs core.a $$file.o; \
+	done
+	for file in $(CORECXXFILES) ; do \
+		echo "Building CXX $$file"; \
+		$(CXX) $(CXXFLAGS) -c /home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/cores/arduino/$$file -o $$file.o; \
+		$(AR) rcs core.a $$file.o; \
+	done
+
+$(BIN).elf: $(OBJS) core.a
+	$(CC) $(LDFLAGS) core.a -o $@ $^
+	$(ABINDIR)/avr-size $@
+
+install: $(BIN).hex
+	$(ABINDIR)/avrdude -C$(AETCDIR)/avrdude.conf -v -cwiring -p$(MCU) -P$(PORT) -b115200 -D -Uflash:w:$<:i
+
+serial:
+	picocom -b 115200 $(PORT)
+
+clean:
+	rm -f core.a $(BIN).elf $(BIN).hex $(OBJS)
