@@ -60,8 +60,6 @@ void setup() {
 bool oldValues[7] = {0};
 void loop() {
 
-  Serial.write("yay\n");
-
   bool newValues[7];
   for (int i = 0; i < 7; ++i) {
     newValues[i] = analogRead(A9 + i) > 512;
