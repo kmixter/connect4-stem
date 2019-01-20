@@ -1,23 +1,7 @@
-CXXFLAGS += -std=c++11 -I googletest/include -I googletest -DTESTING
-O = out/host
-COMMON = $(O)/board.o $(O)/r2d2bot.o
-TESTS = $(O)/board_test.o $(O)/r2d2bot_test.o
-
-.PHONY: directories
-
-all: directories $(O)/tests
-
-directories:
-	mkdir -p $(O) $(O)/googletest/src
-
-$(O)/%.o: %.cc
-	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
-
-$(O)/tests: $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o
-	$(CXX) -o $(O)/tests $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o -pthread
-	./$(O)/tests
-
-$(O)/board_test.o: board.h
+all:
+	make -f Makefile.host 
+	make -f Makefile.arduino
 
 clean:
-	rm -rf $(O)
+	make -f Makefile.host clean
+	make -f Makefile.arduino clean
