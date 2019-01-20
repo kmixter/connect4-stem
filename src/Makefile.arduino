@@ -6,7 +6,9 @@ PKG=connect4
 O=out/arduino
 BIN=$(O)/$(PKG)
 OBJS=$(O)/connect4.o $(O)/input_manager.o \
-    $(O)/third_party/LiquidCrystal_I2C/LiquidCrystal_I2C.o
+    $(O)/third_party/LiquidCrystal_I2C/LiquidCrystal_I2C.o \
+    $(O)/third_party/Adafruit_Motor_Shield_V2_Library/Adafruit_MotorShield.o \
+    $(O)/third_party/Adafruit_Motor_Shield_V2_Library/utility/Adafruit_MS_PWMServoDriver.o
 MCU=atmega2560
 
 CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing \
@@ -14,7 +16,9 @@ CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing \
     -DARDUINO_AVR_MEGA2560 -DARDUINO_ARCH_AVR \
     -I$(ADIR)/hardware/arduino/avr/cores/arduino \
     -I$(ADIR)/hardware/arduino/avr/variants/mega \
-    -I$(ALIBDIR)/Wire/src -Ithird_party/LiquidCrystal_I2C
+    -I$(ALIBDIR)/Wire/src -Ithird_party/LiquidCrystal_I2C \
+    -Ithird_party/Adafruit_Motor_Shield_V2_Library \
+    -Ithird_party/Adafruit_Motor_Shield_V2_Library/utility
 
 CXXFLAGS=$(CFLAGS) -fpermissive -fno-exceptions -std=gnu++11 \
     -fno-threadsafe-statics
@@ -22,7 +26,8 @@ CXXFLAGS=$(CFLAGS) -fpermissive -fno-exceptions -std=gnu++11 \
 all: directories $(BIN).elf
 
 directories:
-	mkdir -p $(O) $(O)/third_party/LiquidCrystal_I2C $(O)/Wire/src $(O)/Wire/src/utility
+	mkdir -p $(O) $(O)/third_party/LiquidCrystal_I2C $(O)/Wire/src \
+		$(O)/Wire/src/utility $(O)/third_party/Adafruit_Motor_Shield_V2_Library/utility
 
 LDFLAGS=-Os -g -flto -fuse-linker-plugin -Wl,--gc-sections,--relax \
     -mmcu=$(MCU) -lm

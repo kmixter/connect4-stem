@@ -1,9 +1,14 @@
 #include <Arduino.h>
+#include <Adafruit_MotorShield.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include "input_manager.h"
 
-LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal_I2C g_lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+Adafruit_MotorShield g_motors;
+const int kStepperStepsPerRevolution = 200;
+const int kStepperMotorPort = 2;
+Adafruit_StepperMotor* g_stepper;
 
 typedef void (*StateHandler)();
 StateHandler g_state = nullptr;
@@ -18,15 +23,18 @@ static void HandleGameStartState();
 
 void setup()
 {
-  lcd.init();                      // initialize the lcd 
-  lcd.init();
-  lcd.backlight();
+  g_lcd.init();                      // initialize the lcd 
+  g_lcd.init();
+  g_lcd.backlight();
 
   // Start serial connection
   Serial.begin(9600);
   // Configure pin 12/13 for inputs from momentary
   // push bottons connected to 5V
   g_state = HandleInitialState;
+
+  g_stepper = g_motors.getStepper(kStepperStepsPerRevolution, kStepperMotorPort);
+  g_stepper->setSpeed(10);  // 10 RPM
 }
 
 // display_controller.h
@@ -45,7 +53,7 @@ void DisplayController::Show(const char* s) {
   int i = 0;
   if (current_ && strcmp(s, current_) == 0)
     return;
-  lcd.clear();
+  g_lcd.clear();
   for (int l = 0; l < 2; ++l) {
     int line_len = 0;
     int line_start = i;
@@ -60,9 +68,9 @@ void DisplayController::Show(const char* s) {
       last_break = i;
     else if (last_break < 0)
       last_break = i;
-    lcd.setCursor((16 - (last_break - line_start)) / 2, l);
+    g_lcd.setCursor((16 - (last_break - line_start)) / 2, l);
     for (int j = line_start; j < last_break; ++j)
-      lcd.write(s[j]);
+      g_lcd.write(s[j]);
     i = last_break;
     if (s[i] == ' ')
       ++i;
