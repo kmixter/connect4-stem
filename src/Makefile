@@ -1,25 +1,23 @@
 CXXFLAGS += -std=c++11 -I googletest/include -I googletest -DTESTING
-COMMON = out/board.o out/r2d2bot.o
-TESTS = out/board_test.o out/r2d2bot_test.o
+O = out/host
+COMMON = $(O)/board.o $(O)/r2d2bot.o
+TESTS = $(O)/board_test.o $(O)/r2d2bot_test.o
 
 .PHONY: directories
 
-all: directories out/tests
+all: directories $(O)/tests
 
-directories: out
+directories:
+	mkdir -p $(O) $(O)/googletest/src
 
-out:
-	mkdir -p out
-	mkdir -p out/googletest/src
-
-out/%.o: %.cc
+$(O)/%.o: %.cc
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
-out/tests: $(COMMON) $(TESTS) out/googletest/src/gtest-all.o out/googletest/src/gtest_main.o
-	$(CXX) -o out/tests $(COMMON) $(TESTS) out/googletest/src/gtest-all.o out/googletest/src/gtest_main.o -pthread
-	./out/tests
+$(O)/tests: $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o
+	$(CXX) -o $(O)/tests $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o -pthread
+	./$(O)/tests
 
-out/board_test.o: board.h
+$(O)/board_test.o: board.h
 
 clean:
-	rm -rf out
+	rm -rf $(O)
