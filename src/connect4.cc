@@ -1,13 +1,20 @@
 #include <Arduino.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
+#include "input_manager.h"
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 typedef void (*StateHandler)();
 StateHandler g_state = nullptr;
 
+InputManager g_input;
+
 static void HandleInitialState();
+static void HandleStartEasyState();
+static void HandleStartMediumState();
+static void HandleStartHardState();
+static void HandleGameStartState();
 
 void setup()
 {
@@ -22,131 +29,36 @@ void setup()
   g_state = HandleInitialState;
 }
 
-// input_manager.h
-
-enum EventKind {
-  kKeyDown = 0,
-  kKeyUp = 1
-};
-
-enum InputKey {
-  kNoButtonKey,
-  kYesButtonKey,
-  kHomeSwitchKey,
-  kColumn0Key,
-  kColumn1Key,
-  kColumn2Key,
-  kColumn3Key,
-  kColumn4Key,
-  kColumn5Key,
-  kColumn6Key,
-  kKeyMax
-};
-
-struct InputEvent {
-  EventKind kind : 4;
-  InputKey key : 4;
-  InputEvent(EventKind e = kKeyDown, InputKey k = kNoButtonKey) : kind(e), key(k) {}
-};
-
-class InputManager {
- public:
-  InputManager();
-
-  int GetCurrentState() const;
-  void Poll();
-  bool Get(InputEvent* e) {
-    return Dequeue(e);
-  }
-
- private:
-  static const int kNoButton = 8;
-  static const int kYesButton = 9;
-  static const int kAnalogColumn0 = A9;
-  static const int kAnalogHomeSwitch = A8;
-  static const int kQueueSize = 32;
-
-  bool Enqueue(const InputEvent& e);
-  bool Dequeue(InputEvent* e);
-
-  int last_state_;
-  int last_enqueued_;
-  InputEvent queue_[kQueueSize];
-};
-
-InputManager::InputManager() : last_state_(0), last_enqueued_(-1) {
-  pinMode(kYesButton, INPUT_PULLUP);
-  pinMode(kNoButton, INPUT_PULLUP);
-  pinMode(kAnalogHomeSwitch, INPUT_PULLUP);
-  for (int i = 0; i < 7; ++i)
-    pinMode(kAnalogColumn0 + i, INPUT);
-}
-
-void InputManager::Poll() {
-  int current_state = GetCurrentState();
-  int diffs = current_state ^ last_state_;
-  for (int i = 0; i < kKeyMax; ++i) {
-    if (diffs & (1 << i)) {
-      if (current_state & (1 << i))
-        Enqueue(InputEvent(kKeyDown, InputKey(i)));
-      else
-        Enqueue(InputEvent(kKeyUp, InputKey(i)));
-    }
-  }
-}
-
-int InputManager::GetCurrentState() const {
-  int result =
-      ((!digitalRead(kNoButton)) << kNoButtonKey) |
-      ((!digitalRead(kYesButton)) << kYesButtonKey) |
-      ((analogRead(kAnalogHomeSwitch) < 512) << kHomeSwitchKey);
-  for (int c = 0; c < 7; ++c) {
-    result |= (analogRead(kAnalogColumn0 + c) < 512) <<
-                   (kColumn0Key + c);
-  }
-  return result;
-}
-
-bool InputManager::Enqueue(const InputEvent& e) {
-  if (last_enqueued_ + 1 >= kQueueSize)
-    return false;
-  queue_[++last_enqueued_] = e;
-  return true;
-}
-
-bool InputManager::Dequeue(InputEvent* e) {
-  if (last_enqueued_ < 0)
-    return false;
-  *e = queue_[0];
-  memmove(&queue_[0], &queue_[1], sizeof(InputEvent[kQueueSize-1]));
-  --last_enqueued_;
-  return true;
-}
-
-InputManager g_input;
-
 // display_controller.h
 
 class DisplayController {
  public:
-  DisplayController() {}
+  DisplayController() : current_(nullptr) {}
   void Show(const char* s);
+
+  char* current_;
 };
 
 DisplayController g_display;
 
 void DisplayController::Show(const char* s) {
   int i = 0;
+  if (current_ && strcmp(s, current_) == 0)
+    return;
+  lcd.clear();
   for (int l = 0; l < 2; ++l) {
     int line_len = 0;
     int line_start = i;
     int last_break = -1;
     for (; s[i] && line_len < 16; ++i) {
-      if (s[i] == ' ')
+      if (s[i] == ' ') {
         last_break = i;
+      }
       ++line_len;
     }
-    if (last_break < 0)
+    if (s[i] == '\0')
+      last_break = i;
+    else if (last_break < 0)
       last_break = i;
     lcd.setCursor((16 - (last_break - line_start)) / 2, l);
     for (int j = line_start; j < last_break; ++j)
@@ -155,18 +67,54 @@ void DisplayController::Show(const char* s) {
     if (s[i] == ' ')
       ++i;
   }
+  if (current_) free(current_);
+  current_ = strdup(s);
 }
 
 static void HandleInitialState() {
   g_display.Show("Do you want to play?");
-#if 0
   InputEvent e;
-  if (g_input.Get(&e)) {
-    Serial.println("Got a press.");
-    Serial.println(e.kind);
-    Serial.println(e.key);
-  }
-#endif
+  if (!g_input.Get(&e))
+    return;
+  if (e.IsKeyUp(kYesButtonKey))
+    g_state = HandleStartEasyState;
+}
+
+static void HandleStartEasyState() {
+  g_display.Show("Do you want to go easy?");
+  InputEvent e;
+  if (!g_input.Get(&e))
+    return;
+  if (e.IsKeyUp(kYesButtonKey))
+    g_state = HandleGameStartState;
+  if (e.IsKeyUp(kNoButtonKey))
+    g_state = HandleStartMediumState;
+}
+
+static void HandleStartMediumState() {
+  g_display.Show("Do you want to go medium?");
+  InputEvent e;
+  if (!g_input.Get(&e))
+    return;
+  if (e.IsKeyUp(kYesButtonKey))
+    g_state = HandleGameStartState;
+  if (e.IsKeyUp(kNoButtonKey))
+    g_state = HandleStartHardState;
+}
+
+static void HandleStartHardState() {
+  g_display.Show("Do you want to go hard?");
+  InputEvent e;
+  if (!g_input.Get(&e))
+    return;
+  if (e.IsKeyUp(kYesButtonKey))
+    g_state = HandleGameStartState;
+  if (e.IsKeyUp(kNoButtonKey))
+    g_state = HandleInitialState;
+}
+
+static void HandleGameStartState() {
+  g_display.Show("Let's start. I'll go first!");  
 }
 
 void loop()

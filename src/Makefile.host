@@ -1,7 +1,7 @@
 CXXFLAGS += -std=c++11 -I googletest/include -I googletest -DTESTING
 O = out/host
-COMMON = $(O)/board.o $(O)/r2d2bot.o
-TESTS = $(O)/board_test.o $(O)/r2d2bot_test.o
+COMMON = $(O)/board.o $(O)/r2d2bot.o $(O)/input_manager.o
+TESTS = $(O)/board_test.o $(O)/r2d2bot_test.o $(O)/input_manager_test.o
 
 .PHONY: directories
 

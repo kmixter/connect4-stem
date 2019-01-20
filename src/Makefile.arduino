@@ -5,7 +5,8 @@ ALIBDIR=$(ADIR)/hardware/arduino/avr/libraries
 PKG=connect4
 O=out/arduino
 BIN=$(O)/$(PKG)
-OBJS=$(O)/$(PKG).o $(O)/third_party/LiquidCrystal_I2C/LiquidCrystal_I2C.o
+OBJS=$(O)/connect4.o $(O)/input_manager.o \
+    $(O)/third_party/LiquidCrystal_I2C/LiquidCrystal_I2C.o
 MCU=atmega2560
 
 CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing \
@@ -81,7 +82,7 @@ install: $(BIN).hex
 	$(ABINDIR)/avrdude -C$(AETCDIR)/avrdude.conf -v -cwiring -p$(MCU) -P$(PORT) -b115200 -D -Uflash:w:$<:i
 
 serial:
-	picocom -b 115200 $(PORT)
+	picocom $(PORT)
 
 run: install serial
 
