@@ -43,7 +43,7 @@ enum InputKey {
 struct InputEvent {
   EventKind kind : 4;
   InputKey key : 4;
-  InputEvent(EventKind e, InputKey k) : kind(e), key(k) {}
+  InputEvent(EventKind e = kKeyDown, InputKey k = kNoButtonKey) : kind(e), key(k) {}
 };
 
 class InputManager {
@@ -57,20 +57,21 @@ class InputManager {
   }
 
  private:
-  const int kNoButton = 8;
-  const int kYesButton = 9;
-  const int kAnalogColumn0 = D9;
-  const int kAnalogHomeSwitch = D8;
-  const int kQueueSize = 32;
+  static const int kNoButton = 8;
+  static const int kYesButton = 9;
+  static const int kAnalogColumn0 = A9;
+  static const int kAnalogHomeSwitch = A8;
+  static const int kQueueSize = 32;
 
   bool Enqueue(const InputEvent& e);
   bool Dequeue(InputEvent* e);
 
   int last_state_;
+  int last_enqueued_;
   InputEvent queue_[kQueueSize];
 };
 
-InputManager::InputManager() : last_state_(0), last_enqueue(-1) {
+InputManager::InputManager() : last_state_(0), last_enqueued_(-1) {
   pinMode(kYesButton, INPUT_PULLUP);
   pinMode(kNoButton, INPUT_PULLUP);
   pinMode(kAnalogHomeSwitch, INPUT_PULLUP);
@@ -83,10 +84,10 @@ void InputManager::Poll() {
   int diffs = current_state ^ last_state_;
   for (int i = 0; i < kKeyMax; ++i) {
     if (diffs & (1 << i)) {
-      if (current_state_ & (1 << i))
-        Enqueue(InputEvent(kKeyDown, i));
+      if (current_state & (1 << i))
+        Enqueue(InputEvent(kKeyDown, InputKey(i)));
       else
-        Enqueue(InputEvent(kKeyUp, i));
+        Enqueue(InputEvent(kKeyUp, InputKey(i)));
     }
   }
 }
@@ -104,9 +105,9 @@ int InputManager::GetCurrentState() const {
 }
 
 bool InputManager::Enqueue(const InputEvent& e) {
-  if (last_enqueued + 1 >= kQueueSize)
+  if (last_enqueued_ + 1 >= kQueueSize)
     return false;
-  queue_[++last_enqueued] = e;
+  queue_[++last_enqueued_] = e;
   return true;
 }
 
@@ -155,12 +156,14 @@ void DisplayController::Show(const char* s) {
 
 void HandleInitialState() {
   g_display.Show("Do you want to play?");
+#if 0
   InputEvent e;
   if (g_input.Get(&e)) {
     Serial.println("Got a press.");
     Serial.println(e.kind);
     Serial.println(e.key);
   }
+#endif
 }
 
 void loop()
