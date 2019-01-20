@@ -1,29 +1,38 @@
 ADIR?=$(HOME)/prj/arduino-1.8.8
-ABINDIR?=$(ADIR)/hardware/tools/avr/bin
-AETCDIR?=$(ADIR)/hardware/tools/avr/etc
-PKG=led
+ABINDIR=$(ADIR)/hardware/tools/avr/bin
+AETCDIR=$(ADIR)/hardware/tools/avr/etc
+ALIBDIR=$(ADIR)/hardware/arduino/avr/libraries
+PKG=connect4
 O=out/arduino
 BIN=$(O)/$(PKG)
-OBJS=$(O)/$(PKG).o
+OBJS=$(O)/$(PKG).o $(O)/third_party/LiquidCrystal_I2C/LiquidCrystal_I2C.o
 MCU=atmega2560
 
-CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing -flto -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=10808 -DARDUINO_AVR_MEGA2560 -DARDUINO_ARCH_AVR -I/home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/cores/arduino -I/home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/variants/mega
-CXXFLAGS=$(CFLAGS) -fpermissive -fno-exceptions -std=gnu++11 -fno-threadsafe-statics
+CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing \
+    -flto -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=10808 \
+    -DARDUINO_AVR_MEGA2560 -DARDUINO_ARCH_AVR \
+    -I$(ADIR)/hardware/arduino/avr/cores/arduino \
+    -I$(ADIR)/hardware/arduino/avr/variants/mega \
+    -I$(ALIBDIR)/Wire/src -Ithird_party/LiquidCrystal_I2C
 
-.PHONY: directories
+CXXFLAGS=$(CFLAGS) -fpermissive -fno-exceptions -std=gnu++11 \
+    -fno-threadsafe-statics
 
-all: directories
+all: directories $(BIN).elf
 
-directories: $(O) $(BIN).elf
+directories:
+	mkdir -p $(O) $(O)/third_party/LiquidCrystal_I2C $(O)/Wire/src $(O)/Wire/src/utility
 
-$(O):
-	mkdir -p $(O) 
+LDFLAGS=-Os -g -flto -fuse-linker-plugin -Wl,--gc-sections,--relax \
+    -mmcu=$(MCU) -lm
 
-LDFLAGS=-Os -g -flto -fuse-linker-plugin -Wl,--gc-sections,--relax -mmcu=$(MCU) -lm
+CORECFILES=wiring_shift.c WInterrupts.c hooks.c wiring.c \
+	wiring_analog.c wiring_pulse.c wiring_digital.c
 
-CORECFILES=wiring_shift.c WInterrupts.c hooks.c wiring.c wiring_analog.c wiring_pulse.c wiring_digital.c
-
-CORECXXFILES=HardwareSerial.cpp HardwareSerial0.cpp HardwareSerial1.cpp USBCore.cpp WMath.cpp HardwareSerial2.cpp HardwareSerial3.cpp WString.cpp main.cpp Tone.cpp new.cpp CDC.cpp abi.cpp IPAddress.cpp Print.cpp Stream.cpp PluggableUSB.cpp
+CORECXXFILES=HardwareSerial.cpp HardwareSerial0.cpp HardwareSerial1.cpp \
+    USBCore.cpp WMath.cpp HardwareSerial2.cpp HardwareSerial3.cpp \
+    WString.cpp main.cpp Tone.cpp new.cpp CDC.cpp abi.cpp IPAddress.cpp \
+    Print.cpp Stream.cpp PluggableUSB.cpp
 
 CC=$(ABINDIR)/avr-gcc
 CXX=$(ABINDIR)/avr-g++
@@ -34,22 +43,37 @@ PORT=/dev/ttyACM0
 $(O)/%.o: %.cc
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
+$(O)/%.o: %.cpp
+	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
+
 $(BIN).hex: $(BIN).elf
 	$(OBJCOPY) -O ihex $< $@
 
 $(O)/core.a:
 	for file in $(CORECFILES) ; do \
 		echo "Building C $$file"; \
-		$(CC) $(CFLAGS) -c /home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/cores/arduino/$$file -o $(O)/$$file.o; \
+		$(CC) $(CFLAGS) -c $(ADIR)/hardware/arduino/avr/cores/arduino/$$file -o $(O)/$$file.o; \
 		$(AR) rcs $(O)/core.a $(O)/$$file.o; \
 	done
 	for file in $(CORECXXFILES) ; do \
 		echo "Building CXX $$file"; \
-		$(CXX) $(CXXFLAGS) -c /home/kmixter/prj/arduino-1.8.8/hardware/arduino/avr/cores/arduino/$$file -o $(O)/$$file.o; \
+		$(CXX) $(CXXFLAGS) -c $(ADIR)/hardware/arduino/avr/cores/arduino/$$file -o $(O)/$$file.o; \
 		$(AR) rcs $(O)/core.a $(O)/$$file.o; \
 	done
 
-$(BIN).elf: $(OBJS) $(O)/core.a
+$(O)/libs.a:
+	for file in Wire/src/utility/twi.c ; do \
+		echo "Building C $$file"; \
+		$(CC) $(CFLAGS) -c $(ALIBDIR)/$$file -o $(O)/$$file.o; \
+		$(AR) rcs $(O)/libs.a $(O)/$$file.o; \
+	done
+	for file in Wire/src/Wire.cpp ; do \
+		echo "Building CXX $$file"; \
+		$(CXX) $(CXXFLAGS) -c $(ALIBDIR)/$$file -o $(O)/$$file.o; \
+		$(AR) rcs $(O)/libs.a $(O)/$$file.o; \
+	done
+
+$(BIN).elf: $(OBJS) $(O)/core.a $(O)/libs.a
 	$(CC) $(LDFLAGS) $(O)/core.a -o $@ $^
 	$(ABINDIR)/avr-size $@
 
@@ -57,7 +81,7 @@ install: $(BIN).hex
 	$(ABINDIR)/avrdude -C$(AETCDIR)/avrdude.conf -v -cwiring -p$(MCU) -P$(PORT) -b115200 -D -Uflash:w:$<:i
 
 serial:
-	picocom $(PORT)
+	picocom -b 115200 $(PORT)
 
 run: install serial
 
