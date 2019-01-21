@@ -2,6 +2,7 @@ ADIR?=$(HOME)/prj/arduino-1.8.8
 ABINDIR=$(ADIR)/hardware/tools/avr/bin
 AETCDIR=$(ADIR)/hardware/tools/avr/etc
 ALIBDIR=$(ADIR)/hardware/arduino/avr/libraries
+ATLIBDIR=$(ADIR)/libraries
 PKG=connect4
 O=out/arduino
 BIN=$(O)/$(PKG)
@@ -18,16 +19,18 @@ CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing \
     -I$(ADIR)/hardware/arduino/avr/variants/mega \
     -I$(ALIBDIR)/Wire/src -Ithird_party/LiquidCrystal_I2C \
     -Ithird_party/Adafruit_Motor_Shield_V2_Library \
-    -Ithird_party/Adafruit_Motor_Shield_V2_Library/utility
+    -Ithird_party/Adafruit_Motor_Shield_V2_Library/utility \
+    -I$(ATLIBDIR)/Servo/src
 
 CXXFLAGS=$(CFLAGS) -fpermissive -fno-exceptions -std=gnu++11 \
     -fno-threadsafe-statics
 
-all: directories $(BIN).elf
+all: $(BIN).elf
 
 directories:
 	mkdir -p $(O) $(O)/third_party/LiquidCrystal_I2C $(O)/Wire/src \
-		$(O)/Wire/src/utility $(O)/third_party/Adafruit_Motor_Shield_V2_Library/utility
+		$(O)/Wire/src/utility $(O)/third_party/Adafruit_Motor_Shield_V2_Library/utility \
+		$(O)/Servo/src/avr
 
 LDFLAGS=-Os -g -flto -fuse-linker-plugin -Wl,--gc-sections,--relax \
     -mmcu=$(MCU) -lm
@@ -78,13 +81,18 @@ $(O)/libs.a:
 		$(CXX) $(CXXFLAGS) -c $(ALIBDIR)/$$file -o $(O)/$$file.o; \
 		$(AR) rcs $(O)/libs.a $(O)/$$file.o; \
 	done
+	for file in Servo/src/avr/Servo.cpp ; do \
+		echo "Building CXX $$file"; \
+		$(CXX) $(CXXFLAGS) -c $(ATLIBDIR)/$$file -o $(O)/$$file.o; \
+		$(AR) rcs $(O)/libs.a $(O)/$$file.o; \
+	done
 
-$(BIN).elf: $(OBJS) $(O)/core.a $(O)/libs.a
-	$(CC) $(LDFLAGS) $(O)/core.a -o $@ $^
+$(BIN).elf: $(OBJS) $(O)/libs.a $(O)/core.a
+	$(CC) $(LDFLAGS) -o $@ $^
 	$(ABINDIR)/avr-size $@
 
-install: $(BIN).hex
-	$(ABINDIR)/avrdude -C$(AETCDIR)/avrdude.conf -v -cwiring -p$(MCU) -P$(PORT) -b115200 -D -Uflash:w:$<:i
+install: directories $(BIN).hex
+	$(ABINDIR)/avrdude -C$(AETCDIR)/avrdude.conf -v -cwiring -p$(MCU) -P$(PORT) -b115200 -D -Uflash:w:$(BIN).hex:i
 
 serial:
 	picocom $(PORT)
