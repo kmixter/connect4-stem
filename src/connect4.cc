@@ -12,9 +12,11 @@ const int kStepperMotorPort = 2;
 Adafruit_StepperMotor* g_stepper;
 Servo g_servo;
 const int kServoOutput = 10;
-const int kServoLoadingAngle = 90;
-const int kServoUnloadingAngle = 0;
-const int kStepsBetweenColumns = 100;
+const int kServoLoadingAngle = 0;
+const int kServoUnloadingAngle = 80;
+const int kStepsBetweenColumns = 170;
+const int kDropTimeoutMs = 1000;
+const int kErrorTimeoutMs = 5000;
 
 typedef void (*StateHandler)();
 StateHandler g_state = nullptr;
@@ -32,6 +34,7 @@ static void HandleDiagnosticsHomingForwardState();
 static void HandleDiagnosticsHomingBackwardState();
 static void HandleWaitForDiscDrop();
 static void HandleDiagnosticsMovingNextColumnState();
+static void HandleDiagnosticErrorTimeoutState();
 
 void setup()
 {
@@ -45,10 +48,10 @@ void setup()
   // push bottons connected to 5V
   g_state = HandleInitialState;
 
+  g_motors.begin();
   g_stepper = g_motors.getStepper(kStepperStepsPerRevolution, kStepperMotorPort);
   g_stepper->setSpeed(10);  // 10 RPM
   g_servo.attach(kServoOutput);
-  g_servo.write(kServoLoadingAngle);
 }
 
 // display_controller.h
@@ -98,6 +101,7 @@ void DisplayController::Show(const char* s) {
 static void HandleInitialState() {
   g_display.Show("Do you want to play?");
   g_stepper->release();
+  g_servo.write(kServoLoadingAngle);
   InputEvent e;
   if (!g_input.Get(&e))
     return;
@@ -155,13 +159,18 @@ static void HandleAskDiagnosticsState() {
     g_state = HandleInitialState;
 }
 
+static int s_total_steps_backward;
+static unsigned long s_millis_start_error_display;
+
 static void HandleDiagnosticsPrecondState() {
   g_display.Show("Is hopper full and board empty?");
   InputEvent e;
   if (!g_input.Get(&e))
     return;
-  if (e.IsKeyUp(kYesButtonKey))
+  if (e.IsKeyUp(kYesButtonKey)) {
+    s_total_steps_backward = 0;
     g_state = HandleDiagnosticsHomingBackwardState;
+  }
 }
 
 static void HandleDiagnosticsHomingBackwardState() {
@@ -171,29 +180,64 @@ static void HandleDiagnosticsHomingBackwardState() {
     Serial.println("Hit home switch, moving forward");
     return;
   }
-  g_stepper->step(1, BACKWARD, SINGLE);
+  g_stepper->step(2, BACKWARD, SINGLE);
+  s_total_steps_backward += 2;
+  if (s_total_steps_backward > 8 * kStepsBetweenColumns) {
+    g_display.Show("Not moving? Stuck? Didn't find home.");
+    s_millis_start_error_display = millis();
+    g_state = HandleDiagnosticErrorTimeoutState;
+  }
 }
 
-static int s_current_column_wait = 0;
+static int s_current_column_wait;
+static unsigned long s_millis_start_wait;
+
 static void HandleDiagnosticsHomingForwardState() {
   g_stepper->step(20, FORWARD, SINGLE);
   g_servo.write(kServoUnloadingAngle);
   g_state = HandleWaitForDiscDrop;
+  s_millis_start_wait = millis();
   s_current_column_wait = 0;
 }
 
 static int s_steps_left;
 static void HandleWaitForDiscDrop() {
   InputEvent e;
-  if (!g_input.Get(&e))
-    return;
-  if (!e.IsKeyUp(InputKey(int(kColumn0Key) + s_current_column_wait))) {
-    Serial.print("Unexpected key pressed = ");
-    Serial.println(e.key);
+  g_stepper->release();
+  if (millis() - s_millis_start_wait > kDropTimeoutMs) {
+    g_display.Show("Disc never fell. Empty? Stuck?");
+    s_millis_start_error_display = millis();
+    g_state = HandleDiagnosticErrorTimeoutState;
     return;
   }
+  bool found = false;
+  InputKey this_key(InputKey(int(kColumn0Key) + s_current_column_wait));
+  while (g_input.Get(&e)) {
+    Serial.print("Considering ");
+    Serial.println(e.key);
+    if (e.IsKeyDown(this_key)) {
+      // Ignore down event for when disc first goes into column before drop.
+      continue;
+    } else if (e.IsKeyUp(this_key)) {
+      Serial.println("Found this key up");
+      found = true;
+    }
+    else if (e.key == kHomeSwitchKey) {
+      // Ignore home microswitch pushes enqueued from when we seeked
+      // home position.
+      continue;
+    } else {
+      Serial.print("Unexpected key pressed = ");
+      Serial.println(e.key);
+    }
+  }
+
+  if (!found) {
+    return;
+  }
+
   g_servo.write(kServoLoadingAngle);
-  if (s_current_column_wait < 7) {
+  if (s_current_column_wait < 6) {
     ++s_current_column_wait;
     Serial.print("Going to next column ");
     Serial.println(s_current_column_wait);
@@ -204,6 +248,11 @@ static void HandleWaitForDiscDrop() {
     Serial.println("Success!");
     g_state = HandleInitialState;
   }
+}
+
+static void HandleDiagnosticErrorTimeoutState() {
+  if (millis() - s_millis_start_error_display > kErrorTimeoutMs)
+    g_state = HandleInitialState;
 }
 
 static void HandleDiagnosticsMovingNextColumnState() {
@@ -218,6 +267,7 @@ static void HandleDiagnosticsMovingNextColumnState() {
 
   g_servo.write(kServoUnloadingAngle);
   g_state = HandleWaitForDiscDrop;
+  s_millis_start_wait = millis();
 }
 
 void loop()
