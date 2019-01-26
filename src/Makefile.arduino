@@ -95,7 +95,7 @@ install: directories $(BIN).hex
 	$(ABINDIR)/avrdude -C$(AETCDIR)/avrdude.conf -v -cwiring -p$(MCU) -P$(PORT) -b115200 -D -Uflash:w:$(BIN).hex:i
 
 serial:
-	picocom $(PORT)
+	picocom -b 115200 $(PORT)
 
 run: install serial
 

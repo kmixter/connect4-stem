@@ -45,7 +45,7 @@ void setup()
   g_display.Initialize(&g_lcd);
 
   // Start serial connection
-  Serial.begin(9600);
+  Serial.begin(115200);
   // Configure pin 12/13 for inputs from momentary
   // push bottons connected to 5V
   g_state = HandleInitialState;
