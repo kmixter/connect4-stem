@@ -228,8 +228,17 @@ static void HandleDiagnosticsMovingNextColumnState() {
   s_millis_start_wait = millis();
 }
 
-void loop()
-{
+int main(void) {
+  init();
+  setup();
+
+  while (true) {
+    g_state();
+    yield();
+  }
+}
+
+void yield() {
   g_input.Poll();
-  g_state();
+  if (serialEventRun) serialEventRun();
 }
