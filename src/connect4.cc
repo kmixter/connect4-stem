@@ -56,80 +56,9 @@ void setup()
   g_servo.attach(kServoOutput);
 }
 
-static void HandleInitialState() {
-  g_display.Show("Do you want to play?");
-  g_stepper->release();
-  g_servo.write(kServoLoadingAngle);
-  InputEvent e;
-  if (!g_input.Get(&e))
-    return;
-  if (e.IsKeyUp(kYesButtonKey))
-    g_state = HandleStartEasyState;
-  else if (e.IsKeyUp(kNoButtonKey))
-    g_state = HandleAskDiagnosticsState;
-}
-
-static void HandleStartEasyState() {
-  g_display.Show("Do you want to go easy?");
-  InputEvent e;
-  if (!g_input.Get(&e))
-    return;
-  if (e.IsKeyUp(kYesButtonKey))
-    g_state = HandleGameStartState;
-  if (e.IsKeyUp(kNoButtonKey))
-    g_state = HandleStartMediumState;
-}
-
-static void HandleStartMediumState() {
-  g_display.Show("Do you want to go medium?");
-  InputEvent e;
-  if (!g_input.Get(&e))
-    return;
-  if (e.IsKeyUp(kYesButtonKey))
-    g_state = HandleGameStartState;
-  if (e.IsKeyUp(kNoButtonKey))
-    g_state = HandleStartHardState;
-}
-
-static void HandleStartHardState() {
-  g_display.Show("Do you want to go hard?");
-  InputEvent e;
-  if (!g_input.Get(&e))
-    return;
-  if (e.IsKeyUp(kYesButtonKey))
-    g_state = HandleGameStartState;
-  if (e.IsKeyUp(kNoButtonKey))
-    g_state = HandleInitialState;
-}
-
-static void HandleGameStartState() {
-  g_display.Show("Let's start. I'll go first!");  
-}
-
-static void HandleAskDiagnosticsState() {
-  g_display.Show("Should I run a test?");
-  InputEvent e;
-  if (!g_input.Get(&e))
-    return;
-  if (e.IsKeyUp(kYesButtonKey))
-    g_state = HandleDiagnosticsPrecondState;
-  if (e.IsKeyUp(kNoButtonKey))
-    g_state = HandleInitialState;
-}
-
+static void HandleInitialState() {}
 static int s_total_steps_backward;
 static unsigned long s_millis_start_error_display;
-
-static void HandleDiagnosticsPrecondState() {
-  g_display.Show("Is hopper full and board empty?");
-  InputEvent e;
-  if (!g_input.Get(&e))
-    return;
-  if (e.IsKeyUp(kYesButtonKey)) {
-    s_total_steps_backward = 0;
-    g_state = HandleDiagnosticsHomingBackwardState;
-  }
-}
 
 static void HandleDiagnosticsHomingBackwardState() {
   g_display.Show("Running test!");
@@ -228,13 +157,56 @@ static void HandleDiagnosticsMovingNextColumnState() {
   s_millis_start_wait = millis();
 }
 
+bool AskYesNo(const char* question) {
+  g_display.Show(question);
+  InputEvent e;
+  while (true) {
+    yield();
+    if (!g_input.Get(&e))
+      continue;
+    if (e.IsKeyUp(kYesButtonKey))
+      return true;
+    if (e.IsKeyUp(kNoButtonKey))
+      return false;
+    if (e.kind == kKeyDown)
+      continue;
+    Serial.print("Ignoring key ");
+    Serial.println(e.key);
+  }
+}
+
+void StartGame() {
+  g_display.Show("Let's start. I'll go first!");
+  while(true) {
+    yield();
+  }
+}
+
 int main(void) {
   init();
   setup();
 
   while (true) {
-    g_state();
-    yield();
+    g_stepper->release();
+    g_servo.write(kServoLoadingAngle);
+
+    if (AskYesNo("Do you want to play?")) {
+      if (AskYesNo("Do you want to go easy?")) {
+        StartGame();
+      } else if (AskYesNo("Do you want to go medium?")) {
+        StartGame();
+      } else if (AskYesNo("Do you want to go hard?")) {
+        StartGame();
+      }
+    } else if (AskYesNo("Do you want to run a test?")) {
+      while (!AskYesNo("Is hopper full, board empty?"));
+      s_total_steps_backward = 0;
+      g_state = HandleDiagnosticsHomingBackwardState;
+      while (g_state != HandleInitialState) {
+        g_state();
+        yield();
+      }
+    }
   }
 }
 
