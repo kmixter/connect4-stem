@@ -6,7 +6,7 @@ ATLIBDIR=$(ADIR)/libraries
 PKG=connect4
 O=out/arduino
 BIN=$(O)/$(PKG)
-OBJS=$(O)/connect4.o $(O)/input_manager.o \
+OBJS=$(O)/connect4.o $(O)/input_manager.o $(O)/display_controller.o \
     $(O)/third_party/LiquidCrystal_I2C/LiquidCrystal_I2C.o \
     $(O)/third_party/Adafruit_Motor_Shield_V2_Library/Adafruit_MotorShield.o \
     $(O)/third_party/Adafruit_Motor_Shield_V2_Library/utility/Adafruit_MS_PWMServoDriver.o

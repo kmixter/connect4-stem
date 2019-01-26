@@ -3,6 +3,8 @@
 #include <Servo.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
+
+#include "display_controller.h"
 #include "input_manager.h"
 
 LiquidCrystal_I2C g_lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
@@ -36,11 +38,11 @@ static void HandleWaitForDiscDrop();
 static void HandleDiagnosticsMovingNextColumnState();
 static void HandleDiagnosticErrorTimeoutState();
 
+DisplayController g_display;
+
 void setup()
 {
-  g_lcd.init();                      // initialize the lcd 
-  g_lcd.init();
-  g_lcd.backlight();
+  g_display.Initialize(&g_lcd);
 
   // Start serial connection
   Serial.begin(9600);
@@ -52,50 +54,6 @@ void setup()
   g_stepper = g_motors.getStepper(kStepperStepsPerRevolution, kStepperMotorPort);
   g_stepper->setSpeed(10);  // 10 RPM
   g_servo.attach(kServoOutput);
-}
-
-// display_controller.h
-
-class DisplayController {
- public:
-  DisplayController() : current_(nullptr) {}
-  void Show(const char* s);
-
-  char* current_;
-};
-
-DisplayController g_display;
-
-void DisplayController::Show(const char* s) {
-  int i = 0;
-  if (current_ && strcmp(s, current_) == 0)
-    return;
-  Serial.print("Showing ");
-  Serial.println(s);
-  g_lcd.clear();
-  for (int l = 0; l < 2; ++l) {
-    int line_len = 0;
-    int line_start = i;
-    int last_break = -1;
-    for (; s[i] && line_len < 16; ++i) {
-      if (s[i] == ' ') {
-        last_break = i;
-      }
-      ++line_len;
-    }
-    if (s[i] == '\0')
-      last_break = i;
-    else if (last_break < 0)
-      last_break = i;
-    g_lcd.setCursor((16 - (last_break - line_start)) / 2, l);
-    for (int j = line_start; j < last_break; ++j)
-      g_lcd.write(s[j]);
-    i = last_break;
-    if (s[i] == ' ')
-      ++i;
-  }
-  if (current_) free(current_);
-  current_ = strdup(s);
 }
 
 static void HandleInitialState() {
