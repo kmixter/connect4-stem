@@ -37,20 +37,27 @@ struct InputEvent {
 
 class InputManager {
  public:
+  static const int kQueueSize = 32;
+
   InputManager();
 
   int GetCurrentState() const;
-  void Poll();
+  bool Poll();
   bool Get(InputEvent* e) {
     return Dequeue(e);
   }
+
+  // Get an input event of this key.
+  bool GetFiltered(InputKey k, InputEvent* e);
+
+  // Return current top of queue without dequeuing.
+  bool Peek(InputEvent* e) const;
 
  private:
   static const int kNoButton = 8;
   static const int kYesButton = 9;
   static const int kAnalogColumn0 = A9;
   static const int kAnalogHomeSwitch = A8;
-  static const int kQueueSize = 32;
 
   bool Enqueue(const InputEvent& e);
   bool Dequeue(InputEvent* e);
