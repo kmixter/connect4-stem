@@ -1,5 +1,7 @@
 #include "board.h"
 
+#include <string.h>
+
 #ifdef TESTING
 string Board::ToString() const {
 	string output;
@@ -187,5 +189,20 @@ const char* Board::GetCellLocator(int row, int column) {
     result[1] = '#';
 
   result[2] = 0;
+  return result;
+}
+
+// Not thread safe.
+const char* Board::GetWinLocator() {
+  static char result[6];
+  int win_row, win_col, win_delta_row, win_delta_col;
+  if (!FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col)) {
+    strcpy(result, "None");
+  } else {
+    strcpy(result, Board::GetCellLocator(win_row, win_col));
+    result[2] = '-';
+    strcpy(result + 3, Board::GetCellLocator(win_row + 3 * win_delta_row,
+                                             win_col + 3 * win_delta_col));
+  }
   return result;
 }

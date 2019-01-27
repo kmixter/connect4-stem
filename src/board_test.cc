@@ -173,6 +173,7 @@ TEST_F(BoardTest, FirstWin) {
   EXPECT_EQ(2, win_col);
   EXPECT_EQ(1, win_delta_row);
   EXPECT_EQ(0, win_delta_col);
+  EXPECT_STREQ("C1-C4", b_.GetWinLocator());
   bool is_draw = true;
   ASSERT_TRUE(b_.IsTerminal(&is_draw));
   EXPECT_FALSE(is_draw);
@@ -192,6 +193,7 @@ TEST_F(BoardTest, HorizontalWin) {
   EXPECT_EQ(1, win_col);
   EXPECT_EQ(0, win_delta_row);
   EXPECT_EQ(1, win_delta_col);
+  EXPECT_STREQ("B2-E2", b_.GetWinLocator());
 }
 
 TEST_F(BoardTest, SlashWin) {
@@ -208,6 +210,7 @@ TEST_F(BoardTest, SlashWin) {
   EXPECT_EQ(1, win_col);
   EXPECT_EQ(1, win_delta_row);
   EXPECT_EQ(1, win_delta_col);
+  EXPECT_STREQ("B1-E4", b_.GetWinLocator());
 }
 
 TEST_F(BoardTest, BackslashWin) {
@@ -224,6 +227,7 @@ TEST_F(BoardTest, BackslashWin) {
   EXPECT_EQ(5, win_col);
   EXPECT_EQ(1, win_delta_row);
   EXPECT_EQ(-1, win_delta_col);
+  EXPECT_STREQ("F1-C4", b_.GetWinLocator());
 }
 
 TEST_F(BoardTest, MiddleOf3DoesntWin) {
@@ -232,6 +236,7 @@ TEST_F(BoardTest, MiddleOf3DoesntWin) {
   EXPECT_TRUE(b_.Add(2, kRedDisc));
   int win_row, win_col, win_delta_row, win_delta_col;
   EXPECT_FALSE(b_.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col));
+  EXPECT_STREQ("None", b_.GetWinLocator());
 }
 
 TEST_F(BoardTest, MiddleWin) {

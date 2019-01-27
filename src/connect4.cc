@@ -18,7 +18,8 @@ InputManager g_input;
 DropperController g_dropper;
 
 const unsigned long kUserSwitchColumnTimeoutMs = 2000;
-static const char kExitGameEarly[] = "Exit game early?";
+static const char kExitGameEarly[] = "End game early?";
+static const char kYourTurn[] = "Your turn!";
 
 DisplayController g_display;
 char g_string[64];
@@ -34,17 +35,33 @@ void setup()
   g_dropper.Initialize(&g_input);
 }
 
-bool AskYesNo(const char* question) {
+bool AskYesNo(const char* question, bool blink = false) {
   g_display.Show(question);
   InputEvent e;
+  unsigned long last_ms = millis();
+  const int kBlinkIntervalMs = 500;
+  bool display_on = true;
+
   while (true) {
     yield();
+    if (blink && millis() - last_ms > kBlinkIntervalMs) {
+      display_on = !display_on;
+      if (display_on)
+        g_lcd.backlight();
+      else
+        g_lcd.noBacklight();
+      last_ms = millis();
+    }
     if (!g_input.Get(&e))
       continue;
-    if (e.IsKeyUp(kYesButtonKey))
+    if (e.IsKeyUp(kYesButtonKey)) {
+      g_lcd.backlight();
       return true;
-    if (e.IsKeyUp(kNoButtonKey))
+    }
+    if (e.IsKeyUp(kNoButtonKey)) {
+      g_lcd.backlight();
       return false;
+    }
     if (e.kind == kKeyDown)
       continue;
     Serial.print("Ignoring key ");
@@ -73,7 +90,7 @@ bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
   InputEvent e;
   if (!bot->FindNextMove(b, &bot_column) ||
       !b->Add(bot_column, disc, &bot_row)) {
-    ShowMessage("Bot failed. You win.");
+    ShowMessage("Bot failed.");
     return false;
   }
 
@@ -124,6 +141,7 @@ bool HandleUserTurn(Board* b, CellContents disc) {
   InputEvent e;
   unsigned long last_selection_ms = 0;
   int last_selection_column = -1;
+  g_display.Show(kYourTurn);
 
   while (last_selection_column == -1 ||
          millis() - last_selection_ms < kUserSwitchColumnTimeoutMs) {
@@ -139,6 +157,7 @@ bool HandleUserTurn(Board* b, CellContents disc) {
       case kNoButtonKey:
         if (AskYesNo(kExitGameEarly))
           return false;
+        g_display.Show(kYourTurn);
         break;
 
       case kColumn0Key:
@@ -171,17 +190,22 @@ bool HandleUserTurn(Board* b, CellContents disc) {
 }
 
 void ShowDraw() {
-  ShowMessage("It's a draw! Good game!");
+  AskYesNo("It's a draw! Good game! Continue?", true);
 }
 
-void ShowUserWins() {
-  ShowMessage("What an upset, you win!");
+void ShowUserWins(Board* b) {
+  strcpy(g_string, "Good job, you win! ");
+  strcat(g_string, b->GetWinLocator());
+  strcat(g_string, " Continue?");
+  AskYesNo(g_string, true);
 }
 
-void ShowBotWins(PlayerBot* bot) {
+void ShowBotWins(PlayerBot* bot, Board* b) {
   strcpy(g_string, bot->GetName());
-  strcat(g_string, " won!!!");
-  ShowMessage(g_string);
+  strcat(g_string, " won!! ");
+  strcat(g_string, b->GetWinLocator());
+  strcat(g_string, " Continue?");
+  AskYesNo(g_string, true);
 }
 
 void RunGame(PlayerBot* bot) {
@@ -208,11 +232,9 @@ void RunGame(PlayerBot* bot) {
       if (is_draw)
         ShowDraw();
       else
-        ShowBotWins(bot);
+        ShowBotWins(bot, &b);
       return;
     }
-
-    g_display.Show("Your turn!");
 
     if (!HandleUserTurn(&b, kYellowDisc))
       return;
@@ -221,7 +243,7 @@ void RunGame(PlayerBot* bot) {
       if (is_draw)
         ShowDraw();
       else
-        ShowUserWins();
+        ShowUserWins(&b);
       return;
     }
   }
