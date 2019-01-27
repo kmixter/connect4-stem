@@ -5,17 +5,23 @@
 
 class PlayerBot {
  public:
- 	PlayerBot(CellContents my_disc);
+  PlayerBot(const char* name, CellContents my_disc) {
+    my_disc_ = my_disc;
+    opponent_disc_ = my_disc == kRedDisc ? kYellowDisc : kRedDisc;
+    name_ = name;
+  }
+
   virtual bool FindNextMove(Board* board, int* column) = 0;
 
+  const char* GetName() const {
+    return name_;
+  }
+
  protected:
- 	CellContents my_disc_;
- 	CellContents opponent_disc_;
+  const char* name_;
+  CellContents my_disc_;
+  CellContents opponent_disc_;
 };
 
-inline PlayerBot::PlayerBot(CellContents my_disc) {
-	my_disc_ = my_disc;
-	opponent_disc_ = my_disc == kRedDisc ? kYellowDisc : kRedDisc;
-}
 
 #endif  // _PLAYERBOT_H

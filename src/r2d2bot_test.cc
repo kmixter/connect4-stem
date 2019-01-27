@@ -16,8 +16,12 @@ class R2D2Test : public testing::Test {
   std::unique_ptr<R2D2Bot> bot_;
 };
 
+TEST_F(R2D2Test, GetName) {
+  EXPECT_STREQ("R2D2", bot_->GetName());
+}
+
 TEST_F(R2D2Test, OpeningMove) {
-	EXPECT_TRUE(PlayMove());
+	ASSERT_TRUE(PlayMove());
   EXPECT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
@@ -45,7 +49,7 @@ TEST_F(R2D2Test, DefendImmediateLossIfNoWin) {
                                "_ _ _ _ _ _ _\n"
                                "R _ _ _ Y _ _\n"
                                "R R Y _ Y Y _\n"));
-  EXPECT_TRUE(PlayMove());
+  ASSERT_TRUE(PlayMove());
   EXPECT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
@@ -61,7 +65,7 @@ TEST_F(R2D2Test, Defend3InARowEvenIfUncovered) {
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ R _ _ _\n"
                                "_ _ _ Y Y _ _\n"));
-  EXPECT_TRUE(PlayMove());
+  ASSERT_TRUE(PlayMove());
   EXPECT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
@@ -77,7 +81,7 @@ TEST_F(R2D2Test, NoOtherRuleAppliesPickLeftMostWithMaxStreak) {
                                "_ _ R _ R _ _\n"
                                "_ _ R _ R R _\n"
                                "Y R Y _ Y R _\n"));
-  EXPECT_TRUE(PlayMove());
+  ASSERT_TRUE(PlayMove());
   EXPECT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ R _ _ _ _\n"

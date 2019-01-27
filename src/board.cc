@@ -155,3 +155,37 @@ bool Board::FindAnyWin(int* win_row, int* win_col, int* win_delta_row, int* win_
   }
   return false;
 }
+
+bool Board::IsTerminal(bool* is_draw) const {
+  int win_row, win_col, win_delta_row, win_delta_col;
+  if (FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col)) {
+    *is_draw = false;
+    return true;
+  }
+  for (int r = 0; r < 6; ++r) {
+    for (int c = 0; c < 7; ++c) {
+      if (contents_[r][c] == kEmpty)
+        return false;
+    }
+  }
+  *is_draw = true;
+  return true;
+}
+
+// Not thread safe.
+const char* Board::GetCellLocator(int row, int column) {
+  static char result[3];
+
+  if (column >= 0 && column < 7)
+    result[0] = 'A' + column;
+  else
+    result[0] = 'X';
+
+  if (row >= 0 && row < 6)
+    result[1] = '1' + row;
+  else
+    result[1] = '#';
+
+  result[2] = 0;
+  return result;
+}

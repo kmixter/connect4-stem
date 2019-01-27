@@ -5,7 +5,7 @@ TESTS = $(O)/board_test.o $(O)/r2d2bot_test.o $(O)/input_manager_test.o
 
 .PHONY: directories
 
-all: directories $(O)/tests
+all: directories $(O)/tests_pass
 
 directories:
 	mkdir -p $(O) $(O)/googletest/src
@@ -13,9 +13,12 @@ directories:
 $(O)/%.o: %.cc
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
+$(O)/tests_pass: $(O)/tests
+	./$(O)/tests
+	touch $(O)/tests_pass
+
 $(O)/tests: $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o
 	$(CXX) -o $(O)/tests $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o -pthread
-	./$(O)/tests
 
 $(O)/board_test.o: board.h
 

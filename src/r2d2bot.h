@@ -5,7 +5,7 @@
 
 class R2D2Bot : public PlayerBot {
  public:
- 	inline R2D2Bot(CellContents c) : PlayerBot(c) {}
+  inline R2D2Bot(CellContents c) : PlayerBot("R2D2", c) {}
   bool FindNextMove(Board* board, int* column) override;
 };
 

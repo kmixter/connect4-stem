@@ -28,6 +28,17 @@ TEST_F(BoardTest, ErrorRequests) {
   EXPECT_EQ((int)kError, (int)b_.Get(0, 7));
 }
 
+TEST_F(BoardTest, GetCellLocator) {
+  EXPECT_STREQ("A#", b_.GetCellLocator(-1, 0));
+  EXPECT_STREQ("A#", b_.GetCellLocator(6, 0));
+  EXPECT_STREQ("X1", b_.GetCellLocator(0, -1));
+  EXPECT_STREQ("X6", b_.GetCellLocator(5, 7));
+  EXPECT_STREQ("C3", b_.GetCellLocator(2, 2));
+  EXPECT_STREQ("G1", b_.GetCellLocator(0, 6));
+  EXPECT_STREQ("A6", b_.GetCellLocator(5, 0));
+  EXPECT_STREQ("G6", b_.GetCellLocator(5, 6));
+}
+
 TEST_F(BoardTest, AddOneRedOkWithNoOutRow) {
   EXPECT_TRUE(b_.Add(2, kRedDisc));
   EXPECT_EQ("_ _ _ _ _ _ _\n"
@@ -162,6 +173,9 @@ TEST_F(BoardTest, FirstWin) {
   EXPECT_EQ(2, win_col);
   EXPECT_EQ(1, win_delta_row);
   EXPECT_EQ(0, win_delta_col);
+  bool is_draw = true;
+  ASSERT_TRUE(b_.IsTerminal(&is_draw));
+  EXPECT_FALSE(is_draw);
 }
 
 TEST_F(BoardTest, HorizontalWin) {
@@ -236,6 +250,21 @@ TEST_F(BoardTest, MiddleWin) {
   EXPECT_EQ(-1, win_delta_col);
 }
 
-// TODO(kmixter): Write a test that makes sure the computer waits for the other
-// person to go.
+TEST_F(BoardTest, IsTerminalDraw) {
+  bool is_draw;
+  ASSERT_FALSE(b_.IsTerminal(&is_draw));
 
+  ASSERT_TRUE(b_.SetFromString("R Y R Y R Y _\n"
+                               "R Y R Y R Y R\n"
+                               "R Y R Y R Y R\n"
+                               "Y R Y R Y R Y\n"
+                               "Y R Y R Y R Y\n"
+                               "Y R Y R Y R Y\n"));
+
+  ASSERT_FALSE(b_.IsTerminal(&is_draw));
+
+  ASSERT_TRUE(b_.Add(6, kRedDisc));
+
+  ASSERT_TRUE(b_.IsTerminal(&is_draw));
+  EXPECT_TRUE(is_draw);
+}
