@@ -12,6 +12,9 @@ class DropperController {
 
  	void Initialize(InputManager* input);
 
+  // Reset internal state after a malfunction.
+  void Reset();
+
  	// Move truck to given column,
  	bool MoveToColumn(int column);
 

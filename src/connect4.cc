@@ -21,6 +21,7 @@ const unsigned long kUserSwitchColumnTimeoutMs = 2000;
 static const char kExitGameEarly[] = "Exit game early?";
 
 DisplayController g_display;
+char g_string[64];
 
 R2D2Bot g_r2d2bot(kRedDisc);
 
@@ -75,17 +76,18 @@ bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
     ShowMessage("Bot failed. You win.");
     return false;
   }
-  char display[64] = {0};
-  strcpy(display, bot->GetName());
-  strcat(display, " picks ");
-  strcat(display, b->GetCellLocator(bot_row, bot_column));
-  g_display.Show(display);
 
-  do {
-    yield();
+  bool successful_move = false;
+
+  while (!successful_move) {
+    strcpy(g_string, bot->GetName());
+    strcat(g_string, " picks ");
+    strcat(g_string, b->GetCellLocator(bot_row, bot_column));
+    g_display.Show(g_string);
+
     if (!g_dropper.MoveToColumn(bot_column) ||
         !g_dropper.DropAndWait()) {
-      if (!g_input.Get(&e)) {
+      if (g_input.Get(&e)) {
         if (e.IsKeyDown(kYesButtonKey) ||
             e.IsKeyDown(kNoButtonKey)) {
           WaitForUp(e);
@@ -101,17 +103,22 @@ bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
           return false;
         }
       } else {
-        ShowMessage("Cannot drop. Failed.");
-        return false;
+        if (AskYesNo("Please fill hopper. OK?")) {
+          g_dropper.Reset();
+          continue;
+        } else {
+          ShowMessage("Quitting.");
+          return false;
+        }
       }
     }
-  } while(false);
+    successful_move = true;
+  }
 
   return true;
 }
 
 bool HandleUserTurn(Board* b, CellContents disc) {
-  char display[64] = {0};
   InputEvent e;
   unsigned long last_selection_ms = 0;
   int last_selection_column = -1;
@@ -140,16 +147,16 @@ bool HandleUserTurn(Board* b, CellContents disc) {
         int user_row;
         int user_column = e.key - kColumn0Key;
         if (!b->Add(user_column, disc, &user_row)) {
-          strcpy(display, "Column X already full");
-          display[7] = '1' + user_column;
+          strcpy(g_string, "Column X already full");
+          g_string[7] = '1' + user_column;
           continue;
         }
         b->UnAdd(user_column);
         last_selection_column = user_column;
         last_selection_ms = millis();
-        strcpy(display, "You pick ");
-        strcat(display, b->GetCellLocator(user_row, user_column));
-        g_display.Show(display);
+        strcpy(g_string, "You pick ");
+        strcat(g_string, b->GetCellLocator(user_row, user_column));
+        g_display.Show(g_string);
         break;
       }
     }
@@ -168,10 +175,9 @@ void ShowUserWins() {
 }
 
 void ShowBotWins(PlayerBot* bot) {
-  char display[64] = {0};
-  strcpy(display, bot->GetName());
-  strcat(display, " won!!!");
-  ShowMessage(display);
+  strcpy(g_string, bot->GetName());
+  strcat(g_string, " won!!!");
+  ShowMessage(g_string);
 }
 
 void RunGame(PlayerBot* bot) {
@@ -179,8 +185,11 @@ void RunGame(PlayerBot* bot) {
     ShowMessage("This bot isn't ready");
     return;
   }
-  while (!AskYesNo("Is hopper full, board empty?")) {
-    ShowMessage("Empty the board and fill the hopper");
+  strcpy(g_string, "You're against ");
+  strcat(g_string, bot->GetName());
+  strcat(g_string, ". Empty?");
+  if (!AskYesNo(g_string)) {
+    ShowMessage("Empty the board first.");
     return;
   }
 
@@ -249,11 +258,11 @@ int main(void) {
 
   while (true) {
    if (AskYesNo("Do you want to play?")) {
-      if (AskYesNo("Do you want to play Roomba?")) {
+      if (AskYesNo("Do you want to go easy?")) {
         RunGame(nullptr);
-      } else if (AskYesNo("Do you want to play R2D2?")) {
+      } else if (AskYesNo("Do you want to go medium?")) {
         RunGame(&g_r2d2bot);
-      } else if (AskYesNo("Do you want to play?")) {
+      } else if (AskYesNo("Do you want to go hard?")) {
         RunGame(nullptr);
       }
     } else if (AskYesNo("Do you want to run a test?")) {

@@ -18,6 +18,11 @@ const int kStepMax = kStepsAtColumn0 + 7 * kStepsBetweenColumns;
 DropperController::DropperController() : current_step_(-1), input_(nullptr) {
 }
 
+void DropperController::Reset() {
+	current_step_ = -1;
+	servo_.write(kServoLoadingAngle);
+}
+
 void DropperController::Initialize(InputManager* input) {
 	input_ = input;
 
@@ -28,7 +33,7 @@ void DropperController::Initialize(InputManager* input) {
   stepper_->release();
 
   servo_.attach(kServoOutput);
-  servo_.write(kServoLoadingAngle);
+  Reset();
 }
 
 bool DropperController::MoveToStep(int target_step) {
