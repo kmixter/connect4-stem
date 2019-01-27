@@ -13,6 +13,7 @@ const int kStepsAtColumn0 = 20;
 const int kStepsBetweenColumns = 170;
 const int kDropTimeoutMs = 1000;
 const int kErrorTimeoutMs = 5000;
+const int kDropDebounceTimeoutMs = 200;
 const int kStepMax = kStepsAtColumn0 + 7 * kStepsBetweenColumns;
 
 DropperController::DropperController() : current_step_(-1), input_(nullptr) {
@@ -118,11 +119,11 @@ bool DropperController::DropAndWait() {
 
   unsigned long start_ms = millis();
   InputKey this_key(InputKey(int(kColumn0Key) + this_column));
+	InputEvent e;
   bool found = false;
 
   while (!found && millis() - start_ms < kDropTimeoutMs) {
   	yield();
-  	InputEvent e;
 		while (input_->GetFiltered(this_key, &e)) {
 	    if (e.kind == kKeyUp) {
 	      Serial.println("Disc passed interrupter");
@@ -130,6 +131,15 @@ bool DropperController::DropAndWait() {
 	    }
 	  }
   }
+
+  // Within a short period of time after dropping the disc, we may
+  // get a second enter/exit. Wait for this to pass and consume
+  // that event.
+  delay(kDropDebounceTimeoutMs);
+  while (input_->GetFiltered(this_key, &e)) {
+  	Serial.println("Consumed interrupter bounce");
+  }
+
   servo_.write(kServoLoadingAngle);
 
   return found;

@@ -112,6 +112,8 @@ bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
         }
       }
     }
+    Serial.print(millis());
+    Serial.println(", drop finished");
     successful_move = true;
   }
 
@@ -129,6 +131,8 @@ bool HandleUserTurn(Board* b, CellContents disc) {
     if (!g_input.Get(&e) || e.kind == kKeyDown) {
       continue;
     }
+    Serial.print(millis());
+    Serial.println(", user touched");
 
     switch (e.key) {
       case kYesButtonKey:
