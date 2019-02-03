@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "board.h"
 #include "r2d2bot.h"
@@ -11,10 +13,42 @@ enum {
 	kErrorExit
 };
 
+class CmdUser : public PlayerBot {
+ public:
+	CmdUser(CellContents disc) : PlayerBot("User", disc) {}
+	bool FindNextMove(Board* b, int* column);
+};
+
+bool CmdUser::FindNextMove(Board* b, int* column) {
+	struct termios old, raw;
+	tcgetattr(STDIN_FILENO, &old);
+	cfmakeraw(&raw);
+	tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+	printf("Enter column [A-G]: ");
+	fflush(stdout);
+	bool valid = false;
+	while (true) {
+		int c = toupper(getchar());
+		if (c == 3 || c == 4) break;
+		if (c < 'A' || c > 'G') continue;
+		int col = c - 'A';
+		if (b->Add(col, my_disc())) {
+			b->UnAdd(col);
+			*column = col;
+			valid = true;
+			break;
+		}
+	}
+	tcsetattr(STDIN_FILENO, TCSANOW, &old);
+	return valid;
+}
 
 PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
 	if (!strcasecmp(name, "R2D2")) {
 		return new R2D2Bot(disc);
+	}
+	if (!strcasecmp(name, "user")) {
+		return new CmdUser(disc);
 	}
 	fprintf(stderr, "No bot named %s\n", name);
 	exit(kErrorExit);
@@ -25,7 +59,7 @@ int RunPlay(PlayerBot** player) {
 	while (!b.IsTerminal()) {
 		int column;
 		for (int num = int(kRedDisc); num <= int(kYellowDisc); ++num) {
-			printf("%s\n\n", b.ToString().c_str());
+			printf("%s\nA B C D E F G\n\n", b.ToString().c_str());
 			if (b.IsTerminal())
 				break;
 			printf("%s Player Go!\n", b.GetContentsName(CellContents(num)));
