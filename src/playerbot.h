@@ -6,8 +6,7 @@
 class PlayerBot {
  public:
   PlayerBot(const char* name, CellContents my_disc) {
-    my_disc_ = my_disc;
-    opponent_disc_ = my_disc == kRedDisc ? kYellowDisc : kRedDisc;
+    SetDisc(my_disc);
     name_ = name;
   }
 
@@ -15,6 +14,15 @@ class PlayerBot {
 
   const char* GetName() const {
     return name_;
+  }
+
+  void SetDisc(CellContents my_disc) {
+    my_disc_ = my_disc;
+    opponent_disc_ = my_disc == kRedDisc ? kYellowDisc : kRedDisc;
+  }
+
+  CellContents my_disc() const {
+    return my_disc_;
   }
 
  protected:

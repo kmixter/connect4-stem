@@ -37,13 +37,17 @@ class Board {
   // the first cell in that direction. 
   bool FindAnyWin(int* win_row, int* win_col, int* win_delta_row, int* win_delta_col) const;
 
-  bool IsTerminal(bool* is_draw) const;
+  bool IsTerminal(bool* is_draw = nullptr) const;
 
   CellContents Get(int row, int column) const {
     if (column < 0 || column > 6) return kError;
     if (row < 0 || row > 5) return kError;
     return contents_[row][column];
   }
+
+#ifdef TESTING
+  static const char* GetContentsName(CellContents disc);
+#endif
 
   static const char* GetCellLocator(int row, int column);
 

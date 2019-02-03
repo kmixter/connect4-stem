@@ -13,12 +13,15 @@ directories:
 $(O)/%.o: %.cc
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
-$(O)/tests_pass: $(O)/tests
+$(O)/tests_pass: $(O)/tests $(O)/play_cmd
 	./$(O)/tests
 	touch $(O)/tests_pass
 
 $(O)/tests: $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o
 	$(CXX) -o $(O)/tests $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o -pthread
+
+$(O)/play_cmd: $(COMMON) $(O)/play_cmd.o
+	$(CXX) -o $@ $^
 
 $(O)/board_test.o: board.h
 

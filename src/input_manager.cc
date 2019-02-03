@@ -16,15 +16,16 @@ InputManager::InputManager() : last_state_(0), last_enqueued_(-1) {
 #endif  // TESTING
 }
 
-bool InputManager::Poll() {
+void InputManager::Poll() {
   int current_state = GetCurrentState();
   int diffs = current_state ^ last_state_;
   for (int i = 0; i < kKeyMax; ++i) {
     if (diffs & (1 << i)) {
-      if (current_state & (1 << i))
+      if (current_state & (1 << i)) {
         Enqueue(InputEvent(kKeyDown, InputKey(i)));
-      else
+      } else {
         Enqueue(InputEvent(kKeyUp, InputKey(i)));
+      }
     }
   }
   last_state_ = current_state;
@@ -46,11 +47,10 @@ int InputManager::GetCurrentState() const {
 #endif
 }
 
-bool InputManager::Enqueue(const InputEvent& e) {
+void InputManager::Enqueue(const InputEvent& e) {
   if (last_enqueued_ + 1 >= kQueueSize)
-    return false;
+    return;
   queue_[++last_enqueued_] = e;
-  return true;
 }
 
 bool InputManager::Dequeue(InputEvent* e) {

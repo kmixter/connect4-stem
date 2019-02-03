@@ -150,13 +150,13 @@ TEST_F(InputManagerTest, GetFilteredMiddle) {
 TEST_F(InputManagerTest, FullQueue) {
 	for (int i = 0; i < InputManager::kQueueSize / 2; ++i) {
 		_testing_current_state = (1 << kHomeSwitchKey);
-		ASSERT_TRUE(in_.Poll());
+		in_.Poll();
 		_testing_current_state = 0;
-		ASSERT_TRUE(in_.Poll());
+		in_.Poll();
 	}
 
 	_testing_current_state = (1 << kColumn3Key);
-	ASSERT_FALSE(in_.Poll());
+	in_.Poll();
 
 	InputEvent e;
 	for (int i = 0; i < InputManager::kQueueSize / 2; ++i) {

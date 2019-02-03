@@ -59,6 +59,16 @@ bool Board::SetFromString(const string& s) {
 	} while (r >= 0);
 	return true;
 }
+
+const char* Board::GetContentsName(CellContents disc) {
+  const char* names[kError + 1] = {
+    "Empty",
+    "Red",
+    "Yellow",
+    "Error"
+  };
+  return names[disc];
+}
 #endif  // TESTING
 
 bool Board::Add(int column, CellContents disc, int* out_row) {
@@ -161,7 +171,8 @@ bool Board::FindAnyWin(int* win_row, int* win_col, int* win_delta_row, int* win_
 bool Board::IsTerminal(bool* is_draw) const {
   int win_row, win_col, win_delta_row, win_delta_col;
   if (FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col)) {
-    *is_draw = false;
+    if (is_draw)
+      *is_draw = false;
     return true;
   }
   for (int r = 0; r < 6; ++r) {
@@ -170,7 +181,8 @@ bool Board::IsTerminal(bool* is_draw) const {
         return false;
     }
   }
-  *is_draw = true;
+  if (is_draw)
+    *is_draw = true;
   return true;
 }
 

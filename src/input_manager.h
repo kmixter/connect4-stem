@@ -42,7 +42,7 @@ class InputManager {
   InputManager();
 
   int GetCurrentState() const;
-  bool Poll();
+  void Poll();
   bool Get(InputEvent* e) {
     return Dequeue(e);
   }
@@ -59,7 +59,7 @@ class InputManager {
   static const int kAnalogColumn0 = A9;
   static const int kAnalogHomeSwitch = A8;
 
-  bool Enqueue(const InputEvent& e);
+  void Enqueue(const InputEvent& e);
   bool Dequeue(InputEvent* e);
 
   int last_state_;
