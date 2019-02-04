@@ -14,6 +14,16 @@ class R2D2Test : public testing::Test {
     int col;
     return bot_->FindNextMove(&b_, &col) && b_.Add(col, kRedDisc);
   }
+
+  void SetTwoTowers() {
+    ASSERT_TRUE(b_.SetFromString("_ _ Y _ Y _ _\n"
+                                 "_ _ R _ R _ _\n"
+                                 "_ _ Y _ Y _ _\n"
+                                 "_ _ R _ R _ _\n"
+                                 "_ _ R _ R R _\n"
+                                 "Y R Y _ Y R _\n"));
+  }
+
   Board b_;
   std::unique_ptr<R2D2Bot> bot_;
   std::unique_ptr<PRNG> prng_;
@@ -25,12 +35,45 @@ TEST_F(R2D2Test, GetName) {
 
 TEST_F(R2D2Test, OpeningMove) {
   ASSERT_TRUE(PlayMove());
-  EXPECT_EQ("_ _ _ _ _ _ _\n"
+  ASSERT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "R _ _ _ _ _ _\n", b_.ToString());
+  b_.UnAdd(0);
+
+  prng_.reset(new NotAtAllRandom(1));
+  bot_->SetPRNG(prng_.get());
+  ASSERT_TRUE(PlayMove());
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ R _ _ _ _ _\n", b_.ToString());
+  b_.UnAdd(1);
+
+  prng_.reset(new NotAtAllRandom(6));
+  bot_->SetPRNG(prng_.get());
+  ASSERT_TRUE(PlayMove());
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ R\n", b_.ToString());
+  b_.UnAdd(6);
+
+  prng_.reset(new NotAtAllRandom(10));
+  bot_->SetPRNG(prng_.get());
+  ASSERT_TRUE(PlayMove());
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ R _ _ _\n", b_.ToString());
 }
 
 TEST_F(R2D2Test, TakeTheWinEvenIfCanDefendImmediateLoss) {
@@ -77,7 +120,7 @@ TEST_F(R2D2Test, Defend3InARowEvenIfUncovered) {
             "_ _ R Y Y _ _\n", b_.ToString());
 }                   
 
-TEST_F(R2D2Test, NoOtherRuleAppliesPickLeftMostWithMaxStreak) {
+TEST_F(R2D2Test, PickMaxStreak) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
@@ -91,7 +134,50 @@ TEST_F(R2D2Test, NoOtherRuleAppliesPickLeftMostWithMaxStreak) {
             "_ _ R _ R _ _\n"
             "_ _ R _ R R _\n"
             "Y R Y _ Y R _\n", b_.ToString());
+  b_.UnAdd(2);
 
+  prng_.reset(new NotAtAllRandom(1));
+  bot_->SetPRNG(prng_.get());
+  ASSERT_TRUE(PlayMove());
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ R _ _\n"
+            "_ _ R _ R _ _\n"
+            "_ _ R _ R R _\n"
+            "Y R Y _ Y R _\n", b_.ToString());
+  b_.UnAdd(4);
+
+  prng_.reset(new NotAtAllRandom(2));
+  bot_->SetPRNG(prng_.get());
+  ASSERT_TRUE(PlayMove());
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ R _ R R _\n"
+            "_ _ R _ R R _\n"
+            "Y R Y _ Y R _\n", b_.ToString());
+  b_.UnAdd(5);
+
+  prng_.reset(new NotAtAllRandom(3));
+  bot_->SetPRNG(prng_.get());
+  ASSERT_TRUE(PlayMove());
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ R _ R _ _\n"
+            "_ _ R _ R R _\n"
+            "Y R Y _ Y R R\n", b_.ToString());
+  b_.UnAdd(6);
+
+  prng_.reset(new NotAtAllRandom(4));
+  bot_->SetPRNG(prng_.get());
+  ASSERT_TRUE(PlayMove());
+  EXPECT_EQ("_ _ _ _ _ _ _\n"
+            "_ _ _ _ _ _ _\n"
+            "_ _ R _ _ _ _\n"
+            "_ _ R _ R _ _\n"
+            "_ _ R _ R R _\n"
+            "Y R Y _ Y R _\n", b_.ToString());
 }
 
 TEST_F(R2D2Test, Draw) {
