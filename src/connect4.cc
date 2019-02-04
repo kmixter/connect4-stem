@@ -6,6 +6,8 @@
 #include "display_controller.h"
 #include "dropper_controller.h"
 #include "input_manager.h"
+#include "prng.h"
+#include "roombabot.h"
 #include "r2d2bot.h"
 
 LiquidCrystal_I2C g_lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
@@ -24,7 +26,9 @@ static const char kYourTurn[] = "Your turn!";
 DisplayController g_display;
 char g_string[64];
 
-R2D2Bot g_r2d2bot(kRedDisc);
+SmallPRNG g_prng(0);
+RoombaBot g_roombabot(kRedDisc, &g_prng);
+R2D2Bot g_r2d2bot(kRedDisc, &g_prng);
 
 void setup()
 {
@@ -283,9 +287,13 @@ int main(void) {
   setup();
 
   while (true) {
-   if (AskYesNo("Do you want to play?")) {
+    if (AskYesNo("Do you want to play?")) {
+      uint32_t seed = micros();
+      g_prng.SetSeed(seed);
+      Serial.print("Setting PRNG seed to ");
+      Serial.println(seed);
       if (AskYesNo("Do you want to go easy?")) {
-        RunGame(nullptr);
+        RunGame(&g_roombabot);
       } else if (AskYesNo("Do you want to go medium?")) {
         RunGame(&g_r2d2bot);
       } else if (AskYesNo("Do you want to go hard?")) {

@@ -1,7 +1,9 @@
 CXXFLAGS += -std=c++11 -I googletest/include -I googletest -DTESTING
 O = out/host
-COMMON = $(O)/board.o $(O)/r2d2bot.o $(O)/input_manager.o
-TESTS = $(O)/board_test.o $(O)/r2d2bot_test.o $(O)/input_manager_test.o
+COMMON = $(O)/board.o $(O)/r2d2bot.o $(O)/input_manager.o $(O)/prng.o \
+		 $(O)/roombabot.o
+TESTS = $(O)/board_test.o $(O)/r2d2bot_test.o $(O)/input_manager_test.o \
+        $(O)/prng_test.o $(O)/roombabot_test.o
 
 .PHONY: directories
 
@@ -17,7 +19,8 @@ $(O)/tests_pass: $(O)/tests $(O)/play_cmd
 	./$(O)/tests
 	touch $(O)/tests_pass
 
-$(O)/tests: $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o
+$(O)/tests: $(COMMON) $(TESTS) \
+	$(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o
 	$(CXX) -o $(O)/tests $(COMMON) $(TESTS) $(O)/googletest/src/gtest-all.o $(O)/googletest/src/gtest_main.o -pthread
 
 $(O)/play_cmd: $(COMMON) $(O)/play_cmd.o

@@ -1,19 +1,22 @@
 #include <memory>
+#include "prng.h"
 #include "r2d2bot.h"
 #include <gtest/gtest.h>
 
 class R2D2Test : public testing::Test {
  protected:
   void SetUp() override {
-  	bot_.reset(new R2D2Bot(kRedDisc));
+    prng_.reset(new NotAtAllRandom(0));
+    bot_.reset(new R2D2Bot(kRedDisc, prng_.get()));
   }
 
   bool PlayMove() {
-  	int col;
-  	return bot_->FindNextMove(&b_, &col) && b_.Add(col, kRedDisc);
+    int col;
+    return bot_->FindNextMove(&b_, &col) && b_.Add(col, kRedDisc);
   }
   Board b_;
   std::unique_ptr<R2D2Bot> bot_;
+  std::unique_ptr<PRNG> prng_;
 };
 
 TEST_F(R2D2Test, GetName) {
@@ -21,7 +24,7 @@ TEST_F(R2D2Test, GetName) {
 }
 
 TEST_F(R2D2Test, OpeningMove) {
-	ASSERT_TRUE(PlayMove());
+  ASSERT_TRUE(PlayMove());
   EXPECT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"

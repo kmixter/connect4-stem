@@ -3,9 +3,11 @@
 
 #include "board.h"
 
+class PRNG;
+
 class PlayerBot {
  public:
-  PlayerBot(const char* name, CellContents my_disc) {
+  PlayerBot(const char* name, CellContents my_disc, PRNG* prng) : prng_(prng) {
     SetDisc(my_disc);
     name_ = name;
   }
@@ -25,10 +27,18 @@ class PlayerBot {
     return my_disc_;
   }
 
+  void SetPRNG(PRNG* prng) {
+    prng_ = prng;
+  }
+
+  PRNG* prng() { return prng_; }
+
+
  protected:
   const char* name_;
   CellContents my_disc_;
   CellContents opponent_disc_;
+  PRNG* prng_;
 };
 
 

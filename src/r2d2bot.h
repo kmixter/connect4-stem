@@ -3,9 +3,11 @@
 
 #include "playerbot.h"
 
+class PRNG;
+
 class R2D2Bot : public PlayerBot {
  public:
-  inline R2D2Bot(CellContents c) : PlayerBot("R2D2", c) {}
+  inline R2D2Bot(CellContents c, PRNG* prng) : PlayerBot("R2D2", c, prng) {}
   bool FindNextMove(Board* board, int* column) override;
 };
 
