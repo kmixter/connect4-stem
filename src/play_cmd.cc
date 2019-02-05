@@ -93,14 +93,46 @@ GameResult RunGame(PlayerBot** player) {
 }
 
 int main(int argc, char* argv[]) {
-  if (argc != 3) {
-    printf("Usage: %s [red player] [yellow player]\n", argv[0]);
+  if (argc != 3 && argc != 4) {
+    printf("Usage: %s [red player] [yellow player] [opt count]\n", argv[0]);
     return kErrorGame;
   }
   PlayerBot* picked[2] = {0};
 
   picked[0] = FindPlayerBot(kRedDisc, argv[1]);
   picked[1] = FindPlayerBot(kYellowDisc, argv[2]);
+  int count = 1;
+  if (argc == 4)
+    count = atoi(argv[3]);
 
-  return int(RunGame(picked));
+  int red_wins = 0;
+  int yellow_wins = 0;
+  int tie_games = 0;
+
+  for (int i = 0; i < count; ++i) {
+    printf("###########\nGAME %d\n###########\n\n", i);
+    switch (RunGame(picked)) {
+      case kRedWinGame:
+        ++red_wins;
+        break;
+      case kYellowWinGame:
+        ++yellow_wins;
+        break;
+      case kTieGame:
+        ++tie_games;
+        break;
+    }
+  }
+
+  printf("Red: %d\n", red_wins);
+  printf("Yellow: %d\n", yellow_wins);
+  if (tie_games != 0)
+    printf("Tie: %d\n", tie_games);
+
+  if (red_wins > yellow_wins)
+    return int(kRedWinGame);
+  else if (yellow_wins > red_wins)
+    return int(kYellowWinGame);
+
+  return int(kTieGame);
 }
