@@ -7,7 +7,7 @@ class RoombaBot : public PlayerBot {
  public:
   RoombaBot(CellContents disc, PRNG* prng) : PlayerBot("Roomba", disc, prng) {}
 
-  bool FindNextMove(Board* board, int* column) override;
+  void FindNextMove(Board* board, Observer* o) override;
 };
 
-#endif  // _ROOMBABOT_H
+#endif  // _ROOMBABOT_H10

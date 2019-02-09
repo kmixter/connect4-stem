@@ -2,8 +2,10 @@
 
 #include "prng.h"
 
-bool R2D2Bot::FindNextMove(Board* board, int* out_column) {
+void R2D2Bot::FindNextMove(Board* board, Observer* o) {
   int max_streaks[7] = {0};
+  Observer::State s;
+
   for (auto column = 0; column < 7; ++column) {
     int row;
     if (!board->Add(column, my_disc_, &row)) 
@@ -11,16 +13,20 @@ bool R2D2Bot::FindNextMove(Board* board, int* out_column) {
     max_streaks[column] = board->FindMaxStreakAt(row, column);
     board->UnAdd(column);
     if (max_streaks[column] >= 4) {
-      *out_column = column;
-      return true;
+      s.kind = PlayerBot::Observer::kMoveDone;
+      s.column = column;
+      o->Observe(&s);
+      return;
     }
 
     if (board->Add(column, opponent_disc_)) {
       auto this_streak_count = board->FindMaxStreakAt(row, column);
       board->UnAdd(column);
       if (this_streak_count >= 4) {
-        *out_column = column;
-        return true;
+        s.kind = PlayerBot::Observer::kMoveDone;
+        s.column = column;
+        o->Observe(&s);
+        return;
       }
     }
   }
@@ -38,7 +44,9 @@ bool R2D2Bot::FindNextMove(Board* board, int* out_column) {
   }
   if (!max_max_streak_count) {
     // We were unable to find a single column that we could add to.
-    return false;
+    s.kind = PlayerBot::Observer::kNoMovePossible;
+    o->Observe(&s);
+    return;
   }
 
   int index = prng_->Roll(max_max_streak_count);
@@ -46,12 +54,14 @@ bool R2D2Bot::FindNextMove(Board* board, int* out_column) {
     if (max_streaks[i] != max_max_streak)
       continue;
     if (index == 0) {
-      *out_column = i;
-      return true;
+      s.kind = PlayerBot::Observer::kMoveDone;
+      s.column = i;
+      o->Observe(&s);
+      return;
     }
     --index;
   }
 
   // Not expected to be reached.
-  return false;
+  return;
 }

@@ -90,10 +90,11 @@ void ShowMessage(const char* msg) {
 }
 
 bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
-  int bot_column, bot_row;
+  int bot_row;
   InputEvent e;
-  if (!bot->FindNextMove(b, &bot_column) ||
-      !b->Add(bot_column, disc, &bot_row)) {
+  SimpleObserver o;
+  bot->FindNextMove(b, &o);
+  if (!o.success || !b->Add(o.column, disc, &bot_row)) {
     ShowMessage("Bot failed.");
     return false;
   }
@@ -103,10 +104,10 @@ bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
   while (!successful_move) {
     strcpy(g_string, bot->GetName());
     strcat(g_string, " picks ");
-    strcat(g_string, b->GetCellLocator(bot_row, bot_column));
+    strcat(g_string, b->GetCellLocator(bot_row, o.column));
     g_display.Show(g_string);
 
-    if (!g_dropper.MoveToColumn(bot_column) ||
+    if (!g_dropper.MoveToColumn(o.column) ||
         !g_dropper.DropAndWait()) {
       if (g_input.Get(&e)) {
         if (e.IsKeyDown(kYesButtonKey) ||

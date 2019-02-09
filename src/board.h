@@ -45,6 +45,12 @@ class Board {
     return contents_[row][column];
   }
 
+  static CellContents GetOpposite(CellContents c) {
+    if (c == kRedDisc) return kYellowDisc;
+    if (c == kYellowDisc) return kRedDisc;
+    return kError;
+  }
+
 #ifdef TESTING
   static const char* GetContentsName(CellContents disc);
 #endif
@@ -53,7 +59,6 @@ class Board {
 
   const char* GetWinLocator();
 
- private:
   // Bottom of board is row 0, top row 5.
   CellContents contents_[6][7];
 };

@@ -12,7 +12,9 @@ class R2D2Test : public testing::Test {
 
   bool PlayMove() {
     int col;
-    return bot_->FindNextMove(&b_, &col) && b_.Add(col, kRedDisc);
+    SimpleObserver o;
+    bot_->FindNextMove(&b_, &o);
+    return o.success && b_.Add(o.column, kRedDisc);
   }
 
   void SetTwoTowers() {
@@ -83,9 +85,10 @@ TEST_F(R2D2Test, TakeTheWinEvenIfCanDefendImmediateLoss) {
                                "_ _ _ _ _ _ _\n"
                                "_ _ Y Y Y _ _\n"
                                "_ _ R R R Y _\n"));
-  int col;
-  EXPECT_TRUE(bot_->FindNextMove(&b_, &col));
-  EXPECT_EQ(1, col);
+  SimpleObserver o;
+  bot_->FindNextMove(&b_, &o);
+  EXPECT_TRUE(o.success);
+  EXPECT_EQ(1, o.column);
 }
 
 TEST_F(R2D2Test, DefendImmediateLossIfNoWin) {
@@ -187,7 +190,7 @@ TEST_F(R2D2Test, Draw) {
                                "Y R Y R Y R Y\n"
                                "Y R Y R Y R Y\n"
                                "Y R Y R Y R Y\n"));
-  int col;
-  EXPECT_FALSE(bot_->FindNextMove(&b_, &col));
+  SimpleObserver o;
+  bot_->FindNextMove(&b_, &o);
+  EXPECT_FALSE(o.success);
 }
-

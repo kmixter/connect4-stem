@@ -19,17 +19,17 @@ enum GameResult {
 class CmdUser : public PlayerBot {
  public:
   CmdUser(CellContents disc) : PlayerBot("User", disc, nullptr) {}
-  bool FindNextMove(Board* b, int* column);
+  void FindNextMove(Board* b, Observer* o) override;
 };
 
-bool CmdUser::FindNextMove(Board* b, int* column) {
+void CmdUser::FindNextMove(Board* b, Observer* o) {
   struct termios old, raw;
   tcgetattr(STDIN_FILENO, &old);
   cfmakeraw(&raw);
   tcsetattr(STDIN_FILENO, TCSANOW, &raw);
   printf("Enter column [A-G]: ");
   fflush(stdout);
-  bool valid = false;
+  PlayerBot::Observer::State s;
   while (true) {
     int c = toupper(getchar());
     if (c == 3 || c == 4) break;
@@ -37,13 +37,13 @@ bool CmdUser::FindNextMove(Board* b, int* column) {
     int col = c - 'A';
     if (b->Add(col, my_disc())) {
       b->UnAdd(col);
-      *column = col;
-      valid = true;
+      s.column = col;
+      s.kind = PlayerBot::Observer::kMoveDone;
+      o->Observe(&s);
       break;
     }
   }
   tcsetattr(STDIN_FILENO, TCSANOW, &old);
-  return valid;
 }
 
 PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
@@ -70,11 +70,13 @@ GameResult RunGame(PlayerBot** player) {
         break;
       printf("%s Player Go!\n", b.GetContentsName(CellContents(num)));
       PlayerBot* current = player[num - int(kRedDisc)];
-      if (!current->FindNextMove(&b, &column)) {
+      SimpleObserver o;
+      current->FindNextMove(&b, &o);
+      if (!o.success) {
         fprintf(stderr, "Find next move failed!\n");
         exit(kErrorGame);
       }
-      if (!b.Add(column, current->my_disc())) {
+      if (!b.Add(o.column, current->my_disc())) {
         fprintf(stderr, "Error adding disc!\n");
         exit(kErrorGame);
       }

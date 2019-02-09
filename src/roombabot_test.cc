@@ -34,9 +34,10 @@ TEST_F(RoombaBotTest, FindNextMove) {
   for (int i = 0; i < 20; ++i) {
     prng_.reset(new NotAtAllRandom(i));
     bot_->SetPRNG(prng_.get());
-    int col;
-    ASSERT_TRUE(bot_->FindNextMove(&b_, &col));
+    SimpleObserver o;
+    bot_->FindNextMove(&b_, &o);
+    ASSERT_TRUE(o.success);
     int expected[] = {0, 1, 3, 5, 6};
-    EXPECT_EQ(expected[i % 5], col);
+    EXPECT_EQ(expected[i % 5], o.column);
   }
 }
