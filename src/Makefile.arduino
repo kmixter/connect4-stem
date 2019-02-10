@@ -14,8 +14,8 @@ OBJS=$(O)/connect4.o $(O)/input_manager.o $(O)/display_controller.o \
     $(O)/third_party/Adafruit_Motor_Shield_V2_Library/utility/Adafruit_MS_PWMServoDriver.o
 MCU=atmega2560
 
-CFLAGS=-g -Os -ffunction-sections -fdata-sections -Wno-error=narrowing \
-    -flto -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=10808 \
+CFLAGS=-g -Wall -Werror -Os -ffunction-sections -fdata-sections \
+    -Wno-error=narrowing -flto -mmcu=$(MCU) -DF_CPU=16000000L -DARDUINO=10808 \
     -DARDUINO_AVR_MEGA2560 -DARDUINO_ARCH_AVR \
     -I$(ADIR)/hardware/arduino/avr/cores/arduino \
     -I$(ADIR)/hardware/arduino/avr/variants/mega \

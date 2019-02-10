@@ -86,7 +86,9 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
       state_.kind = PlayerBot::Observer::kHeuristicDone;
       //printf("Heuristic is %d\n", value);
       state_.heuristic = value;
-      o->Observe(&state_);
+      if (!o->Observe(&state_)) {
+        interrupted_ = true;
+      }
     }
     b->UnAdd(col);
     //if (lookahead >= 0) printf("%d: value %d\n", lookahead, value);
@@ -99,10 +101,10 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
       //if (lookahead >= 0) printf("%d: new extreme c%d, %d\n", lookahead, col, value);
     }
     // If this player can win by this move, no other move can be better.
-    if (just_won)
+    if (just_won || interrupted_)
       break;
   }
-  if (!one_considered) return false;
+  if (!one_considered || interrupted_) return false;
 
   *out_column = extreme_column;
   *out_value = extreme_value;
@@ -116,9 +118,12 @@ void MaxBot::FindNextMove(Board* b, Observer* o) {
     return;
   state_.moves = moves_;
   state_.depth = lookahead_;
+  interrupted_ = false;
   if (!FindBestMove(b, o, my_disc_, lookahead_, &column, &value)) {
-    state_.kind = PlayerBot::Observer::kNoMovePossible;
-    o->Observe(&state_);
+    if (!interrupted_) {
+      state_.kind = PlayerBot::Observer::kNoMovePossible;
+      o->Observe(&state_);
+    }
   } else {
     state_.kind = PlayerBot::Observer::kMoveDone;
     state_.column = column;

@@ -16,7 +16,7 @@ const int kErrorTimeoutMs = 5000;
 const int kDropDebounceTimeoutMs = 200;
 const int kStepMax = kStepsAtColumn0 + 7 * kStepsBetweenColumns;
 
-DropperController::DropperController() : current_step_(-1), input_(nullptr) {
+DropperController::DropperController() : input_(nullptr), current_step_(-1) {
 }
 
 void DropperController::Reset() {

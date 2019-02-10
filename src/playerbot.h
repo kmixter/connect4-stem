@@ -70,7 +70,6 @@ class PlayerBot {
   PRNG* prng_;
 };
 
-
 class SimpleObserver : public PlayerBot::Observer {
  public:
   SimpleObserver() : column(9), success(false) {}
@@ -81,8 +80,8 @@ class SimpleObserver : public PlayerBot::Observer {
     }
     return true;
   }
-  bool success;
   int column;
+  bool success;
 };
 
 #endif  // _PLAYERBOT_H

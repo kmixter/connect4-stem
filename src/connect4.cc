@@ -12,7 +12,7 @@
 #include "randombot.h"
 
 LiquidCrystal_I2C g_lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
-const int kShowMessageTimeoutMs = 5000;
+const int kShowMessageTimeoutMs = 2500;
 
 typedef void (*StateHandler)();
 StateHandler g_state = nullptr;
@@ -97,7 +97,7 @@ YesNoResponse AskYesNo(const char* question, bool blink = false,
   }
 }
 
-void WaitForUp(InputEvent down) {
+void WaitForUp(const InputEvent& down) {
   InputEvent e;
   while (true) {
     yield();
@@ -105,6 +105,26 @@ void WaitForUp(InputEvent down) {
       if (e.IsKeyUp(down.key))
         return;
     }
+  }
+}
+
+void DumpBoardToSerial(Board* b, const char* desc) {
+  Serial.println(desc);
+  for (int row = 5; row >= 0; --row) {
+    for (int col = 0; col < 7; ++col) {
+      switch (b->Get(row, col)) {
+        case kRedDisc:
+          Serial.print("R ");
+          break;
+        case kYellowDisc:
+          Serial.print("Y ");
+          break;
+        default:
+          Serial.print("_ ");
+          break;
+      }
+    }
+    Serial.println("");
   }
 }
 
@@ -146,17 +166,132 @@ void UndoUserMove(Board* b, UserMove* user_move) {
 enum BotResult {
   kBotMoved,
   kBotTurnUserDoOver,
-  kBotSignalExit
+  kBotSignalExit,
+  kBotContinue
 };
+
+class InterruptableObserver : public SimpleObserver {
+ public:
+  bool Observe(PlayerBot::Observer::State* s) {
+    InputEvent e;
+    yield();
+    if (g_input.Peek(&e)) {
+      Serial.println("Interruption during observer");
+      return false;
+    }
+    if (s->kind == kHeuristicDone) {
+      ++heuristics_computed;
+      if (heuristics_computed % 100 == 1)
+        Serial.println("100 more heuristics");
+      return true;
+    } else {
+      return SimpleObserver::Observe(s);
+    }
+  }
+  void Reset() {
+    heuristics_computed = 0;
+  }
+
+  int heuristics_computed = 0;
+};
+
+BotResult HandleKeyDuringBotTurn(Board* b, InputEvent* e,
+                                 UserMove* user_move) {
+  switch (e->key) {
+    case kYesButtonKey:
+    case kNoButtonKey: {
+      if (e->kind == kKeyDown)
+        WaitForUp(*e);
+      if (user_move->IsSet()) {
+        strcpy(g_string, "Was ");
+        strcat(g_string, b->GetCellLocator(user_move->row, user_move->column));
+        strcat(g_string, " your last move?");
+        if (!AskYesNo(g_string)) {
+          UndoUserMove(b, user_move);
+          g_display.Show("Realigning, please wait...");
+          if (!g_dropper.MoveToColumn(g_dropper.GetClosestColumn())) {
+            ShowMessage("Sorry, too many mistakes.");
+            return kBotSignalExit;
+          }
+          return kBotTurnUserDoOver;
+        }
+      }
+      if (AskYesNo(kExitGameEarly)) {
+        return kBotSignalExit;
+      }
+      return kBotContinue;
+    }
+
+    case kHomeSwitchKey: {
+      ShowMessage("Home key pushed. Failed.");
+      return kBotSignalExit;
+    }
+
+    case kColumn0Key:
+    case kColumn1Key:
+    case kColumn2Key:
+    case kColumn3Key:
+    case kColumn4Key:
+    case kColumn5Key:
+    case kColumn6Key: {
+      if (e->kind == kKeyUp) {
+        // We have already somehow consumed the up event for the column,
+        // which is a problem because we need the user handler to consume
+        // this. Fail out. Hopefully this won't happen.
+        Serial.println("Up event for column");
+        break;
+      }
+      if (user_move->IsSet()) {
+        // User moves while the bot is thinking/moving. Let's assume they aren't
+        // cheating and they moved their disc from where we thought
+        // they last put it.
+        UndoUserMove(b, user_move);
+        return kBotTurnUserDoOver;
+      }
+      break;
+    }
+    case kKeyMax: // avoid warning.
+      break;
+  }
+  ShowMessage("I am confused! Ending game.");
+  return kBotSignalExit;
+}
 
 BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
                         UserMove* user_move) {
   int bot_row;
   InputEvent e;
-  SimpleObserver o;
-  g_display.Show("Bot is thinking...");
-  bot->FindNextMove(b, &o);
-  if (!o.success || !b->Add(o.column, disc, &bot_row)) {
+  InterruptableObserver o;
+
+  while (true) {
+    o.Reset();
+    strcpy(g_string, bot->GetName());
+    strcat(g_string, " is thinking");
+    g_display.Show(g_string);
+    unsigned long bot_start_ms = millis();
+    DumpBoardToSerial(b, "Bot board");
+    bot->FindNextMove(b, &o);
+    if (o.success) {
+      Serial.print("Bot took ");
+      Serial.print(millis() - bot_start_ms);
+      Serial.print("ms and computed ");
+      Serial.print(o.heuristics_computed);
+      Serial.println(" heuristics");
+      break;
+    }
+    if (!g_input.Peek(&e)) {
+      ShowMessage("Bot failed.");
+      return kBotSignalExit;
+    }
+    Serial.println("Handling PlayerBot interrupt");
+    while (g_input.Get(&e)) {
+      BotResult r = HandleKeyDuringBotTurn(b, &e, user_move);
+      if (r != kBotContinue)
+        return r;
+    }
+  }
+
+  if (!b->Add(o.column, disc, &bot_row)) {
     ShowMessage("Bot failed.");
     return kBotSignalExit;
   }
@@ -170,7 +305,9 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
   while (!user_move->IsSettled()) {
     yield();
     if (g_input.Peek(&e)) {
-      return kBotTurnUserDoOver;
+      BotResult r = HandleKeyDuringBotTurn(b, &e, user_move);
+      if (r != kBotContinue)
+        return r;
     }
   }
 
@@ -184,49 +321,18 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
 
     if (!g_dropper.MoveToColumn(o.column) || !g_dropper.DropAndWait()) {
       if (g_input.Get(&e)) {
-        if (e.IsKeyDown(kYesButtonKey) ||
-            e.IsKeyDown(kNoButtonKey)) {
-          WaitForUp(e);
-          if (user_move->IsSet()) {
-            strcpy(g_string, "Was ");
-            strcat(g_string, b->GetCellLocator(user_move->row, user_move->column));
-            strcat(g_string, " your last move?");
-            if (!AskYesNo(g_string)) {
-              UndoUserMove(b, user_move);
-              g_display.Show("Realigning, please wait...");
-              if (!g_dropper.MoveToColumn(g_dropper.GetClosestColumn())) {
-                ShowMessage("Sorry, too many mistakes.");
-                return kBotSignalExit;
-              }
-              return kBotTurnUserDoOver;
-            }
-          }
-          if (AskYesNo(kExitGameEarly)) {
-            return kBotSignalExit;
-          }
-          continue;
-        } else if (e.key == kHomeSwitchKey) {
-          ShowMessage("Home key pushed. Failed.");
-          return kBotSignalExit;
-        } else if (e.kind == kKeyDown && user_move->IsSet()) {
-          // User moves while the bot is moving. Let's assume they aren't
-          // cheating and they moved their disc from where we thought
-          // they last put it.
-          UndoUserMove(b, user_move);
-          return kBotTurnUserDoOver;
-        } else {
-          ShowMessage("I am confused! Ending game.");
-          return kBotSignalExit;
-        }
+        BotResult r = HandleKeyDuringBotTurn(b, &e, user_move);
+        if (r != kBotContinue)
+          return r;
       } else {
         if (AskYesNo("Refill the hopper. Ready?")) {
           g_dropper.Reset();
-          continue;
         } else {
           ShowMessage("Quitting.");
           return kBotSignalExit;
         }
       }
+      continue;
     }
     Serial.print(millis());
     Serial.println(", drop finished");
@@ -243,6 +349,7 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
 bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
   InputEvent e;
   g_display.Show(kYourTurn);
+  DumpBoardToSerial(b, "Your board");
 
   user_move->Reset();
 
@@ -255,6 +362,7 @@ bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
     switch (e.key) {
       case kYesButtonKey:
       case kNoButtonKey:
+      case kHomeSwitchKey:
         if (AskYesNo(kExitGameEarly))
           return false;
         g_display.Show(kYourTurn);
@@ -283,6 +391,9 @@ bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
         g_display.Show(g_string);
         break;
       }
+
+      case kKeyMax:  // avoid warning
+        break;
     }
   }
 

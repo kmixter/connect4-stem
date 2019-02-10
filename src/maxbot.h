@@ -18,6 +18,7 @@ class MaxBot : public PlayerBot {
                     int lookahead, int* out_column, int* out_value);
   int lookahead_;
   uint8_t moves_[kMaxLookahead];
+  bool interrupted_ = false;
   PlayerBot::Observer::State state_;
 };
 
