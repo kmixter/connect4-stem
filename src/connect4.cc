@@ -41,12 +41,20 @@ void setup()
   g_dropper.Initialize(&g_input);
 }
 
-bool AskYesNo(const char* question, bool blink = false) {
+enum YesNoResponse {
+  kYesNoResponseNo,
+  kYesNoResponseYes,
+  kYesNoResponseBothButtons
+};
+
+YesNoResponse AskYesNo(const char* question, bool blink = false,
+                       bool allow_both_buttons = false) {
   g_display.Show(question);
   InputEvent e;
   unsigned long last_ms = millis();
   const int kBlinkIntervalMs = 500;
   bool display_on = true;
+  bool yes_down = false, no_down = false, both_down = false;
 
   while (true) {
     yield();
@@ -62,14 +70,28 @@ bool AskYesNo(const char* question, bool blink = false) {
       continue;
     if (e.IsKeyUp(kYesButtonKey)) {
       g_lcd.backlight();
-      return true;
+      yes_down = false;
+      if (!(allow_both_buttons && both_down))
+        return kYesNoResponseYes;
     }
     if (e.IsKeyUp(kNoButtonKey)) {
       g_lcd.backlight();
-      return false;
+      no_down = false;
+      if (!(allow_both_buttons && both_down))
+        return kYesNoResponseNo;
     }
-    if (e.kind == kKeyDown)
+    if (allow_both_buttons && both_down && !yes_down && !no_down) {
+      return kYesNoResponseBothButtons;
+    }
+    if (e.kind == kKeyDown) {
+      if (e.IsKeyDown(kYesButtonKey))
+        yes_down = true;
+      if (e.IsKeyDown(kNoButtonKey))
+        no_down = true;
+      if (yes_down && no_down)
+        both_down = true;
       continue;
+    }
     Serial.print("Ignoring key ");
     Serial.println(e.key);
   }
@@ -260,6 +282,7 @@ void RunGame(PlayerBot* bot) {
 }
 
 void RunTest() {
+  g_display.Show("Here it goes...");
   for (int i = 0; i < 7; ++i) {
     InputEvent e;
     if (!g_dropper.MoveToColumn(i)) {
@@ -293,7 +316,8 @@ int main(void) {
   setup();
 
   while (true) {
-    if (AskYesNo("Do you want to play?")) {
+    YesNoResponse yn = AskYesNo("Do you want to play?", false, true);
+    if (yn == kYesNoResponseYes) {
       uint32_t seed = micros();
       g_prng.SetSeed(seed);
       Serial.print("Setting PRNG seed to ");
@@ -305,8 +329,11 @@ int main(void) {
       } else if (AskYesNo("Do you want to go hard?")) {
         RunGame(&g_maxbot);
       }
-    } else if (AskYesNo("Do you want to run a test?")) {
-      RunTest();
+    } else if (yn == kYesNoResponseNo) {
+      ShowMessage("Sorry, I don't know any jokes.");
+    } else if (yn == kYesNoResponseBothButtons) {
+      if (AskYesNo("Run dropper test?"))
+        RunTest();
     }
   }
 }
