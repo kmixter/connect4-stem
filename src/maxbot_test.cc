@@ -4,6 +4,9 @@
 #include "maxbot.h"
 #include <gtest/gtest.h>
 
+#define M3 1
+#define M2 1
+
 class MaxBotTest : public testing::Test {
  protected:
   void SetUp() override {
@@ -84,8 +87,8 @@ TEST_F(MaxBotTest, HeuristicSoonLosses) {
                                "_ _ _ R R _ _\n"
                                "_ _ R Y Y Y _\n"
                                "_ _ Y R Y R _\n"));
-  EXPECT_EQ((/*hrz*/(4 + 4 + 4) + /*vert*/(2) + /*bs*/(5) + /*slash*/(2+3+3)) -
-            (/*hrz*/(4 + 1) + /*vert*/(1) + /*bs*/(3) + /*slash*/(1)),
+  EXPECT_EQ((/*hrz*/(4 + 4 + 4) + /*vert*/(2) + /*bs*/(3+2*M2) + /*slash*/(2+3+2*M2+1)) -
+            (/*hrz*/(4 + M3) + /*vert*/(1) + /*bs*/(2+M2) + /*slash*/(1)),
             bot_->ComputeHeuristic(&b_)); 
 
   // Yellow is guaranteed a loss in 3 moves. In this case, heuristic
@@ -96,8 +99,8 @@ TEST_F(MaxBotTest, HeuristicSoonLosses) {
                                "Y R R R Y Y R\n"
                                "R Y Y Y R Y R\n"
                                "Y Y R R Y R R\n"));
-  EXPECT_EQ((/*hrz*/(1) + /*vert*/(1) + /*bs*/(0) + /*sl*/(0)) -
-            (/*hrz*/(4) + /*vert*/(0) + /*bs*/(0) + /*sl*/(0)),
+  EXPECT_EQ((/*hrz*/(M3) + /*vert*/(1) + /*bs*/(0) + /*sl*/(0)) -
+            (/*hrz*/(3+M2) + /*vert*/(0) + /*bs*/(0) + /*sl*/(0)),
             bot_->ComputeHeuristic(&b_));
 
   // Yellow is about to lose.
@@ -107,8 +110,8 @@ TEST_F(MaxBotTest, HeuristicSoonLosses) {
                                "_ _ _ R _ _ _\n"
                                "_ _ R R R _ _\n"
                                "_ R Y R Y Y Y\n"));
-  EXPECT_EQ((/*hrz*/(4 + 4) + /*vert*/(3) + /*bs*/(4) + /*slash*/(3+1+1)) -
-            (/*hrz*/(4) + /*vert*/(2) + /*bs*/(3) + /*slash*/(3)),
+  EXPECT_EQ((/*hrz*/(4 + 2*M2+2*M3) + /*vert*/(3) + /*bs*/(2*M2+2) + /*slash*/(M3+2*M2+2)) -
+            (/*hrz*/(4) + /*vert*/(2) + /*bs*/(2+M2) + /*slash*/(3)),
             bot_->ComputeHeuristic(&b_));
 }
 
@@ -120,8 +123,8 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
                                "_ _ _ _ _ _ _\n"
                                "Y _ Y _ _ _ _\n"
                                "R Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(1) + /*bs*/(0) + /*slash*/(3)) -
-            (/*hrz*/(3) + /*vert*/(3) + /*bs*/(0) + /*slash*/(3)), /* -3 */
+  EXPECT_EQ((/*hrz*/(M2+1) + /*vert*/(1) + /*bs*/(0) + /*slash*/(3)) -
+            (/*hrz*/(M2+2) + /*vert*/(3) + /*bs*/(0) + /*slash*/(2+M2)),
             bot_->ComputeHeuristic(&b_));
 
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
@@ -130,8 +133,8 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
                                "_ _ _ _ _ _ _\n"
                                "_ Y Y _ _ _ _\n"
                                "R Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(2) + /*bs*/(0) + /*slash*/(2)) -
-            (/*hrz*/(3) + /*vert*/(3) + /*bs*/(0) + /*slash*/(3)), /* -3 */
+  EXPECT_EQ((/*hrz*/(M2+1) + /*vert*/(2) + /*bs*/(0) + /*slash*/(2)) -
+            (/*hrz*/(2*M2+1) + /*vert*/(2+M2) + /*bs*/(0) + /*slash*/(2+M2)),
             bot_->ComputeHeuristic(&b_));
 
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
@@ -140,8 +143,8 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
                                "_ _ Y _ _ _ _\n"
                                "_ _ Y _ _ _ _\n"
                                "R Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(2) + /*bs*/(0) + /*slash*/(2)) -
-            (/*hrz*/(6) + /*vert*/(3) + /*bs*/(2) + /*slash*/(4)), /* -6 */
+  EXPECT_EQ((/*hrz*/(M2+1) + /*vert*/(2) + /*bs*/(0) + /*slash*/(2)) -
+            (/*hrz*/(6) + /*vert*/(2+M2) + /*bs*/(2) + /*slash*/(3+M2)),
             bot_->ComputeHeuristic(&b_));
 
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
@@ -150,8 +153,8 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
                                "_ _ _ _ _ _ _\n"
                                "_ _ Y Y _ _ _\n"
                                "R Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(1) + /*bs*/(0) + /*slash*/(2)) -
-            (/*hrz*/(4) + /*vert*/(3) + /*bs*/(2) + /*slash*/(3)), /* -6 */
+  EXPECT_EQ((/*hrz*/(M2+1) + /*vert*/(1) + /*bs*/(0) + /*slash*/(2)) -
+            (/*hrz*/(3*M2+1) + /*vert*/(3) + /*bs*/(2) + /*slash*/(2+M2)),
             bot_->ComputeHeuristic(&b_));
 
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
@@ -161,7 +164,7 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
                                "_ _ Y _ _ _ _\n"
                                "R Y R R Y _ _\n"));
   EXPECT_EQ((/*hrz*/(0) + /*vert*/(2) + /*bs*/(0) + /*slash*/(3)) -
-            (/*hrz*/(3) + /*vert*/(3) + /*bs*/(1) + /*slash*/(2)), /* -4 */
+            (/*hrz*/(3) + /*vert*/(3) + /*bs*/(1) + /*slash*/(M2+1)),
             bot_->ComputeHeuristic(&b_));
 
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
@@ -171,52 +174,8 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
                                "_ _ Y _ _ _ _\n"
                                "R Y R R _ Y _\n"));
   EXPECT_EQ((/*hrz*/(0) + /*vert*/(2) + /*bs*/(0) + /*slash*/(3)) -
-            (/*hrz*/(3) + /*vert*/(3) + /*bs*/(1) + /*slash*/(2)), /* -4 */
+            (/*hrz*/(3) + /*vert*/(3) + /*bs*/(1) + /*slash*/(M2+1)),
             bot_->ComputeHeuristic(&b_)); 
-  /* Yellow will pick 2-3 for -6. */
-
-  /* Heuristics for red to column 1 */
-  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ R Y _ _ _ _\n"
-                               "Y Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(2) + /*bs*/(0) + /*slash*/(3)) -
-            (/*hrz*/(1) + /*vert*/(2) + /*bs*/(0) + /*slash*/(2)), /* 1 */
-            bot_->ComputeHeuristic(&b_)); 
-
-  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ Y _ _ _ _ _\n"
-                               "_ R Y _ _ _ _\n"
-                               "_ Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(1) + /*bs*/(0) + /*slash*/(3)) -
-            (/*hrz*/(3) + /*vert*/(2) + /*bs*/(0) + /*slash*/(3)), /* -2 */
-            bot_->ComputeHeuristic(&b_)); 
-
-  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ Y _ _ _ _\n"
-                               "_ R Y _ _ _ _\n"
-                               "_ Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(1) + /*bs*/(0) + /*slash*/(2)) -
-            (/*hrz*/(3) + /*vert*/(2) + /*bs*/(2) + /*slash*/(3)), /* -3 */
-            bot_->ComputeHeuristic(&b_)); 
-
-  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ R Y Y _ _ _\n"
-                               "_ Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(2) + /*vert*/(1) + /*bs*/(0) + /*slash*/(3)) -
-            (/*hrz*/(2) + /*vert*/(2) + /*bs*/(2) + /*slash*/(3)), /* -4 */
-            bot_->ComputeHeuristic(&b_)); 
-
-  /* Yellow will pick 2-3 for -6. */
 
   /* Heuristics for red to column 2 */
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
@@ -225,8 +184,8 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
                                "_ _ R _ _ _ _\n"
                                "_ _ Y _ _ _ _\n"
                                "Y Y R R _ _ _\n"));
-  EXPECT_EQ((/*hrz*/(5) + /*vert*/(2) + /*bs*/(2) + /*slash*/(4)) -
-            (/*hrz*/(3) + /*vert*/(2) + /*bs*/(0) + /*slash*/(2)), /* 0 */
+  EXPECT_EQ((/*hrz*/(4+M2) + /*vert*/(2) + /*bs*/(2) + /*slash*/(4)) -
+            (/*hrz*/(3) + /*vert*/(2) + /*bs*/(0) + /*slash*/(M2+1)),
             bot_->ComputeHeuristic(&b_)); 
 }
 
