@@ -6,7 +6,8 @@ void Rule3Bot::FindNextMove(Board* board, Observer* o) {
   int max_streaks[7] = {0};
   Observer::State s;
 
-  for (auto column = 0; column < 7; ++column) {
+  /* Rule 1: Take immediate win if can. */
+  for (int column = 0; column < 7; ++column) {
     int row;
     if (!board->Add(column, my_disc_, &row)) 
       continue;  // This column must be full.
@@ -18,8 +19,12 @@ void Rule3Bot::FindNextMove(Board* board, Observer* o) {
       o->Observe(&s);
       return;
     }
+  }
 
-    if (board->Add(column, opponent_disc_)) {
+  /* Rule 2: Defend immediate loss if can. */
+  for (int column = 0; column < 7; ++column) {
+    int row;
+    if (board->Add(column, opponent_disc_, &row)) {
       auto this_streak_count = board->FindMaxStreakAt(row, column);
       board->UnAdd(column);
       if (this_streak_count >= 4) {
@@ -30,6 +35,8 @@ void Rule3Bot::FindNextMove(Board* board, Observer* o) {
       }
     }
   }
+
+  /* Rule 3: Take the maximum streak, picking randomly if multiple. */
   int max_max_streak = 0;
   int max_max_streak_count = 0;
   for (int i = 0; i < 7; ++i) {

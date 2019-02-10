@@ -48,13 +48,13 @@ void CmdUser::FindNextMove(Board* b, Observer* o) {
 }
 
 PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
-  if (!strcasecmp(name, "cupcake")) {
+  if (!strcasecmp(name, "random")) {
     return new RandomBot(disc, new SmallPRNG(time(nullptr)));
   }
-  if (!strcasecmp(name, "trifoil")) {
+  if (!strcasecmp(name, "rule3")) {
     return new Rule3Bot(disc, new SmallPRNG(time(nullptr)));
   }
-  if (!strcasecmp(name, "superbot")) {
+  if (!strcasecmp(name, "max")) {
     return new MaxBot(disc, 4, new SmallPRNG(time(nullptr)));
   }
   if (!strcasecmp(name, "user")) {

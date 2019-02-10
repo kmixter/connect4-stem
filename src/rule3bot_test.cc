@@ -91,6 +91,19 @@ TEST_F(Rule3Test, TakeTheWinEvenIfCanDefendImmediateLoss) {
   EXPECT_EQ(1, o.column);
 }
 
+TEST_F(Rule3Test, TakeTheWinEvenIfCanDefendImmediateLossOnLeft) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ Y Y Y _\n"
+                               "_ _ Y R R R _\n"));
+  SimpleObserver o;
+  bot_->FindNextMove(&b_, &o);
+  EXPECT_TRUE(o.success);
+  EXPECT_EQ(6, o.column);
+}
+
 TEST_F(Rule3Test, DefendImmediateLossIfNoWin) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
