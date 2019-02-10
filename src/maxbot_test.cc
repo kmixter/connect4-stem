@@ -1,3 +1,4 @@
+#include <list>
 #include <memory>
 #include "prng.h"
 #include "maxbot.h"
@@ -111,7 +112,7 @@ TEST_F(MaxBotTest, HeuristicSoonLosses) {
             bot_->ComputeHeuristic(&b_));
 }
 
-TEST_F(MaxBotTest, FindNextMoveOneLookaheadEveryStep) {
+TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
   /* Heuristics for red to column 0 */
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
@@ -227,36 +228,38 @@ TEST_F(MaxBotTest, FindNextMoveOneLookaheadEveryStep) {
   EXPECT_EQ((/*hrz*/(5) + /*vert*/(2) + /*bs*/(2) + /*slash*/(4)) -
             (/*hrz*/(3) + /*vert*/(2) + /*bs*/(0) + /*slash*/(2)), /* 0 */
             bot_->ComputeHeuristic(&b_)); 
-#if 0
-  int column;
-
-  ResetBot(kRedDisc, 1);
-
-  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ _ _ _ _ _\n"
-                               "_ _ Y _ _ _ _\n"
-                               "_ Y R R _ _ _\n"));
-  ASSERT_TRUE(bot_->FindNextMove(&b_, &column));
-  EXPECT_EQ(2, column); 
 }
 
-TEST_F(MaxBotTest, FindNextMoveNoLookaheadPickBestYellowHeuristic) {
-  int column;
-
-  ResetBot(kYellowDisc, 1);
-
-  ASSERT_TRUE(bot_->FindNextMove(&b_, &column));
-  EXPECT_EQ(3, column);
-
+TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ Y _ _ _ _\n"
                                "_ Y R R _ _ _\n"));
-  ASSERT_TRUE(bot_->FindNextMove(&b_, &column));
-  EXPECT_EQ(2, column);
-#endif
+
+  class RecordingObserver : public SimpleObserver {
+   public:
+    bool Observe(PlayerBot::Observer::State* s) {
+      if (s->kind == kHeuristicDone) {
+        states.push_back(*s);
+        states.back().moves = new uint8_t[MaxBot::kMaxLookahead];
+        memcpy(states.back().moves, s->moves, MaxBot::kMaxLookahead);
+      }
+      return SimpleObserver::Observe(s);
+    }
+
+    std::list<PlayerBot::Observer::State> states;
+  };
+
+  RecordingObserver o;
+  ResetBot(kRedDisc, 2);
+  bot_->FindNextMove(&b_, &o);
+  ASSERT_TRUE(o.success);
+  EXPECT_EQ(2, o.column); 
+  for (auto i : o.states) {
+    for (int j = i.depth - 1; j >= 0; --j)
+      printf("%d -> ", i.moves[j]);
+    printf("heuristic %ld\n", i.heuristic);
+  }
 }

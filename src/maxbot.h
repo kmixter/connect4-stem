@@ -5,6 +5,7 @@
 
 class MaxBot : public PlayerBot {
  public:
+  static const int kMaxLookahead = 8;
   MaxBot(CellContents disc, int lookahead, PRNG* prng) 
     : PlayerBot("Max", disc, prng), lookahead_(lookahead) {}
 
@@ -16,6 +17,7 @@ class MaxBot : public PlayerBot {
   bool FindBestMove(Board* b, Observer* o, CellContents disc,
                     int lookahead, int* out_column, int* out_value);
   int lookahead_;
+  uint8_t moves_[kMaxLookahead];
   PlayerBot::Observer::State state_;
 };
 

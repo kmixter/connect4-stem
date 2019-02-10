@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "board.h"
+#include "maxbot.h"
 #include "prng.h"
 #include "r2d2bot.h"
 #include "roombabot.h"
@@ -52,6 +53,9 @@ PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
   }
   if (!strcasecmp(name, "Roomba")) {
     return new RoombaBot(disc, new SmallPRNG(time(nullptr)));
+  }
+  if (!strcasecmp(name, "max")) {
+    return new MaxBot(disc, 4, new SmallPRNG(time(nullptr)));
   }
   if (!strcasecmp(name, "user")) {
     return new CmdUser(disc);

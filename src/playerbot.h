@@ -22,7 +22,7 @@ class PlayerBot {
       // only set for kHeuristicDone
       int depth;
       uint8_t* moves;
-      unsigned long heuristic;
+      long heuristic;
       // only set for kMoveDone
       uint8_t column;
     };
