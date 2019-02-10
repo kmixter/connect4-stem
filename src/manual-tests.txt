@@ -1,0 +1,13 @@
+1. Press button while superbot is thinking. Verify asks if last move
+   was right, or fails out if first.
+2. No at play game.
+3. No to cycle through each game.
+4. Move after 2 seconds, verify tracks new board position.
+5. Test user wins (with random bot)
+6. Test bot wins (with rule3 bot)
+7. Test max bot starts ok
+8. Insert disc during first move fails out
+9. Test empty hopper with first drop
+10. Press bot during settling of rule3 bot
+11. Test button during first move asks to quit, no continues move
+12. Test drop during first move bails
