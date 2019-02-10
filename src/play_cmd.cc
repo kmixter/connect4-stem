@@ -64,12 +64,17 @@ PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
   exit(kErrorGame);
 }
 
-GameResult RunGame(PlayerBot** player) {
+void PrintBoard(Board* b) {
+  printf("%s\nA B C D E F G\n\n", b->ToString().c_str());
+}
+
+GameResult RunGame(PlayerBot** player, int* plies) {
   Board b;
+  *plies = 0;
   while (!b.IsTerminal()) {
     int column;
     for (int num = int(kRedDisc); num <= int(kYellowDisc); ++num) {
-      printf("%s\nA B C D E F G\n\n", b.ToString().c_str());
+      PrintBoard(&b);
       if (b.IsTerminal())
         break;
       printf("%s Player Go!\n", b.GetContentsName(CellContents(num)));
@@ -84,8 +89,10 @@ GameResult RunGame(PlayerBot** player) {
         fprintf(stderr, "Error adding disc!\n");
         exit(kErrorGame);
       }
+      ++*plies;
     }
   }
+  PrintBoard(&b);
   int win_row, win_col, win_delta_row, win_delta_col;
   if (!b.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col)) {
     printf("Tie game!\n");
@@ -93,7 +100,7 @@ GameResult RunGame(PlayerBot** player) {
   } else {
     const char* win_desc = b.GetWinLocator();
     CellContents c = b.Get(win_row, win_col);
-    printf("%s won %s!\n", b.GetContentsName(c), win_desc);
+    printf("%s won %s in %d plies!\n", b.GetContentsName(c), win_desc, *plies);
     return c == kRedDisc ? kRedWinGame : kYellowWinGame;
   }
 }
@@ -114,10 +121,12 @@ int main(int argc, char* argv[]) {
   int red_wins = 0;
   int yellow_wins = 0;
   int tie_games = 0;
+  long long total_plies = 0;
 
   for (int i = 0; i < count; ++i) {
     printf("###########\nGAME %d\n###########\n\n", i);
-    switch (RunGame(picked)) {
+    int plies = 0;
+    switch (RunGame(picked, &plies)) {
       case kRedWinGame:
         ++red_wins;
         break;
@@ -128,12 +137,14 @@ int main(int argc, char* argv[]) {
         ++tie_games;
         break;
     }
+    total_plies += plies;
   }
 
   printf("Red: %d\n", red_wins);
   printf("Yellow: %d\n", yellow_wins);
   if (tie_games != 0)
     printf("Tie: %d\n", tie_games);
+  printf("Average plies: %lld\n", total_plies / count);
 
   if (red_wins > yellow_wins)
     return int(kRedWinGame);

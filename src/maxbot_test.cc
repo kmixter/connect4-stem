@@ -21,7 +21,7 @@ class MaxBotTest : public testing::Test {
 };
 
 TEST_F(MaxBotTest, GetName) {
-  EXPECT_STREQ("Max", bot_->GetName());
+  EXPECT_STREQ("Superbot", bot_->GetName());
 }
 
 TEST_F(MaxBotTest, HeuristicNewBoard) {
@@ -230,6 +230,45 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
             bot_->ComputeHeuristic(&b_)); 
 }
 
+class RecordingObserver : public SimpleObserver {
+ public:
+  bool Observe(PlayerBot::Observer::State* s) {
+    if (s->kind == kHeuristicDone) {
+      states.push_back(*s);
+      states.back().moves = new uint8_t[MaxBot::kMaxLookahead];
+      memcpy(states.back().moves, s->moves, MaxBot::kMaxLookahead);
+    }
+    if (s->kind == kMoveDone) {
+      heuristic = s->heuristic;
+    }
+    return SimpleObserver::Observe(s);
+  }
+
+  PlayerBot::Observer::State* Find(int length, int* needle) {
+    for (auto i = states.begin(); i != states.end(); ++i) {
+      if (i->depth == length) {
+        int j;
+        for (j = 0; j < length; ++j) {
+          if (i->moves[j] != needle[j]) break;
+        }
+        if (j == length) return &*i;
+      }
+    }
+    return nullptr;
+  }
+
+  void Dump() {
+    for (auto i : states) {
+      for (int j = i.depth - 1; j >= 0; --j)
+        printf("%d -> ", i.moves[j]);
+      printf("heuristic %ld\n", i.heuristic);
+    }      
+  }
+
+  int heuristic;
+  std::list<PlayerBot::Observer::State> states;
+};
+
 TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
@@ -238,28 +277,15 @@ TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
                                "_ _ Y _ _ _ _\n"
                                "_ Y R R _ _ _\n"));
 
-  class RecordingObserver : public SimpleObserver {
-   public:
-    bool Observe(PlayerBot::Observer::State* s) {
-      if (s->kind == kHeuristicDone) {
-        states.push_back(*s);
-        states.back().moves = new uint8_t[MaxBot::kMaxLookahead];
-        memcpy(states.back().moves, s->moves, MaxBot::kMaxLookahead);
-      }
-      return SimpleObserver::Observe(s);
-    }
-
-    std::list<PlayerBot::Observer::State> states;
-  };
-
   RecordingObserver o;
   ResetBot(kRedDisc, 2);
   bot_->FindNextMove(&b_, &o);
   ASSERT_TRUE(o.success);
-  EXPECT_EQ(2, o.column); 
-  for (auto i : o.states) {
-    for (int j = i.depth - 1; j >= 0; --j)
-      printf("%d -> ", i.moves[j]);
-    printf("heuristic %ld\n", i.heuristic);
-  }
+  EXPECT_EQ(2, o.column);
+  EXPECT_EQ(7 * 7, o.states.size());
+  EXPECT_EQ(-1, o.heuristic);
+  int search[] = {2, 2};
+  auto s = o.Find(2, search);
+  ASSERT_TRUE(s != nullptr);
+  EXPECT_EQ(-1, s->heuristic);
 }
