@@ -1,13 +1,13 @@
 #include <memory>
 #include "prng.h"
-#include "roombabot.h"
+#include "randombot.h"
 #include <gtest/gtest.h>
 
-class RoombaBotTest : public testing::Test {
+class RandomBotTest : public testing::Test {
  protected:
   void SetUp() override {
     prng_.reset(new NotAtAllRandom(0));
-    bot_.reset(new RoombaBot(kRedDisc, prng_.get()));
+    bot_.reset(new RandomBot(kRedDisc, prng_.get()));
   }
 
   void SetTwoTowers() {
@@ -19,16 +19,16 @@ class RoombaBotTest : public testing::Test {
                                  "Y R Y _ Y R _\n"));
   }
   Board b_;
-  std::unique_ptr<RoombaBot> bot_;
+  std::unique_ptr<RandomBot> bot_;
   std::unique_ptr<PRNG> prng_;
 };
 
-TEST_F(RoombaBotTest, GetName) {
-  EXPECT_STREQ("Roomba", bot_->GetName());
+TEST_F(RandomBotTest, GetName) {
+  EXPECT_STREQ("Cupcake", bot_->GetName());
 }
 
 
-TEST_F(RoombaBotTest, FindNextMove) {
+TEST_F(RandomBotTest, FindNextMove) {
   SetTwoTowers();
 
   for (int i = 0; i < 20; ++i) {

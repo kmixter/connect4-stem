@@ -8,8 +8,8 @@
 #include "input_manager.h"
 #include "prng.h"
 #include "maxbot.h"
-#include "r2d2bot.h"
-#include "roombabot.h"
+#include "rule3bot.h"
+#include "randombot.h"
 
 LiquidCrystal_I2C g_lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 const int kShowMessageTimeoutMs = 5000;
@@ -28,8 +28,8 @@ DisplayController g_display;
 char g_string[64];
 
 SmallPRNG g_prng(0);
-RoombaBot g_roombabot(kRedDisc, &g_prng);
-R2D2Bot g_r2d2bot(kRedDisc, &g_prng);
+RandomBot g_randombot(kRedDisc, &g_prng);
+Rule3Bot g_rule3bot(kRedDisc, &g_prng);
 MaxBot g_maxbot(kRedDisc, 4, &g_prng);
 
 void setup()
@@ -222,8 +222,11 @@ void RunGame(PlayerBot* bot) {
   }
   strcpy(g_string, "You're against ");
   strcat(g_string, bot->GetName());
-  strcat(g_string, ". Empty?");
+  strcat(g_string, ". Ready?");
   if (!AskYesNo(g_string)) {
+    return;
+  }
+  if (!AskYesNo("Is board empty and latched?")) {
     ShowMessage("Empty the board first.");
     return;
   }
@@ -296,14 +299,13 @@ int main(void) {
       Serial.print("Setting PRNG seed to ");
       Serial.println(seed);
       if (AskYesNo("Do you want to go easy?")) {
-        RunGame(&g_roombabot);
+        RunGame(&g_randombot);
       } else if (AskYesNo("Do you want to go medium?")) {
-        RunGame(&g_r2d2bot);
+        RunGame(&g_rule3bot);
       } else if (AskYesNo("Do you want to go hard?")) {
         RunGame(&g_maxbot);
       }
     } else if (AskYesNo("Do you want to run a test?")) {
-      while (!AskYesNo("Is hopper full, board empty?"));
       RunTest();
     }
   }

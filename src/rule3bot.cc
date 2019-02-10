@@ -1,8 +1,8 @@
-#include "r2d2bot.h"
+#include "rule3bot.h"
 
 #include "prng.h"
 
-void R2D2Bot::FindNextMove(Board* board, Observer* o) {
+void Rule3Bot::FindNextMove(Board* board, Observer* o) {
   int max_streaks[7] = {0};
   Observer::State s;
 

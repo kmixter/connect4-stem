@@ -7,7 +7,7 @@ class MaxBot : public PlayerBot {
  public:
   static const int kMaxLookahead = 8;
   MaxBot(CellContents disc, int lookahead, PRNG* prng) 
-    : PlayerBot("Max", disc, prng), lookahead_(lookahead) {}
+    : PlayerBot("Superbot", disc, prng), lookahead_(lookahead) {}
 
   void FindNextMove(Board* board, Observer* o) override;
 

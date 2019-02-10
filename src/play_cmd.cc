@@ -7,8 +7,8 @@
 #include "board.h"
 #include "maxbot.h"
 #include "prng.h"
-#include "r2d2bot.h"
-#include "roombabot.h"
+#include "rule3bot.h"
+#include "randombot.h"
 
 enum GameResult {
   kRedWinGame,
@@ -48,13 +48,13 @@ void CmdUser::FindNextMove(Board* b, Observer* o) {
 }
 
 PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
-  if (!strcasecmp(name, "R2D2")) {
-    return new R2D2Bot(disc, new SmallPRNG(time(nullptr)));
+  if (!strcasecmp(name, "cupcake")) {
+    return new RandomBot(disc, new SmallPRNG(time(nullptr)));
   }
-  if (!strcasecmp(name, "Roomba")) {
-    return new RoombaBot(disc, new SmallPRNG(time(nullptr)));
+  if (!strcasecmp(name, "trifoil")) {
+    return new Rule3Bot(disc, new SmallPRNG(time(nullptr)));
   }
-  if (!strcasecmp(name, "max")) {
+  if (!strcasecmp(name, "superbot")) {
     return new MaxBot(disc, 4, new SmallPRNG(time(nullptr)));
   }
   if (!strcasecmp(name, "user")) {

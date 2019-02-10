@@ -1,13 +1,13 @@
 #include <memory>
 #include "prng.h"
-#include "r2d2bot.h"
+#include "rule3bot.h"
 #include <gtest/gtest.h>
 
-class R2D2Test : public testing::Test {
+class Rule3Test : public testing::Test {
  protected:
   void SetUp() override {
     prng_.reset(new NotAtAllRandom(0));
-    bot_.reset(new R2D2Bot(kRedDisc, prng_.get()));
+    bot_.reset(new Rule3Bot(kRedDisc, prng_.get()));
   }
 
   bool PlayMove() {
@@ -27,15 +27,15 @@ class R2D2Test : public testing::Test {
   }
 
   Board b_;
-  std::unique_ptr<R2D2Bot> bot_;
+  std::unique_ptr<Rule3Bot> bot_;
   std::unique_ptr<PRNG> prng_;
 };
 
-TEST_F(R2D2Test, GetName) {
-  EXPECT_STREQ("R2D2", bot_->GetName());
+TEST_F(Rule3Test, GetName) {
+  EXPECT_STREQ("Trifoil", bot_->GetName());
 }
 
-TEST_F(R2D2Test, OpeningMove) {
+TEST_F(Rule3Test, OpeningMove) {
   ASSERT_TRUE(PlayMove());
   ASSERT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
@@ -78,7 +78,7 @@ TEST_F(R2D2Test, OpeningMove) {
             "_ _ _ R _ _ _\n", b_.ToString());
 }
 
-TEST_F(R2D2Test, TakeTheWinEvenIfCanDefendImmediateLoss) {
+TEST_F(Rule3Test, TakeTheWinEvenIfCanDefendImmediateLoss) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
@@ -91,7 +91,7 @@ TEST_F(R2D2Test, TakeTheWinEvenIfCanDefendImmediateLoss) {
   EXPECT_EQ(1, o.column);
 }
 
-TEST_F(R2D2Test, DefendImmediateLossIfNoWin) {
+TEST_F(Rule3Test, DefendImmediateLossIfNoWin) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
@@ -107,7 +107,7 @@ TEST_F(R2D2Test, DefendImmediateLossIfNoWin) {
             "R R Y R Y Y _\n", b_.ToString());
 }
 
-TEST_F(R2D2Test, Defend3InARowEvenIfUncovered) {
+TEST_F(Rule3Test, Defend3InARowEvenIfUncovered) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
@@ -123,7 +123,7 @@ TEST_F(R2D2Test, Defend3InARowEvenIfUncovered) {
             "_ _ R Y Y _ _\n", b_.ToString());
 }                   
 
-TEST_F(R2D2Test, PickMaxStreak) {
+TEST_F(Rule3Test, PickMaxStreak) {
   ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
                                "_ _ _ _ _ _ _\n"
@@ -183,7 +183,7 @@ TEST_F(R2D2Test, PickMaxStreak) {
             "Y R Y _ Y R _\n", b_.ToString());
 }
 
-TEST_F(R2D2Test, Draw) {
+TEST_F(Rule3Test, Draw) {
   ASSERT_TRUE(b_.SetFromString("R Y R Y R Y R\n"
                                "R Y R Y R Y R\n"
                                "R Y R Y R Y R\n"

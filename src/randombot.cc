@@ -1,8 +1,8 @@
-#include "roombabot.h"
+#include "randombot.h"
 
 #include "prng.h"
 
-void RoombaBot::FindNextMove(Board* b, Observer* o) {
+void RandomBot::FindNextMove(Board* b, Observer* o) {
   bool valid_moves[7];
   PlayerBot::Observer::State s;
   int valid_move_count = 0;

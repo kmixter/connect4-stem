@@ -3,9 +3,9 @@
 
 #include "playerbot.h"
 
-class RoombaBot : public PlayerBot {
+class RandomBot : public PlayerBot {
  public:
-  RoombaBot(CellContents disc, PRNG* prng) : PlayerBot("Roomba", disc, prng) {}
+  RandomBot(CellContents disc, PRNG* prng) : PlayerBot("Cupcake", disc, prng) {}
 
   void FindNextMove(Board* board, Observer* o) override;
 };
