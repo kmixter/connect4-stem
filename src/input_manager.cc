@@ -47,6 +47,13 @@ int InputManager::GetCurrentState() const {
 #endif
 }
 
+void InputManager::Flush() {
+  InputEvent e;
+  while (Peek(&e)) {
+    Get(&e);
+  }
+}
+
 void InputManager::Enqueue(const InputEvent& e) {
   if (last_enqueued_ + 1 >= kQueueSize)
     return;

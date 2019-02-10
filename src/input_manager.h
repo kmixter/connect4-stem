@@ -46,6 +46,7 @@ class InputManager {
   bool Get(InputEvent* e) {
     return Dequeue(e);
   }
+  void Flush();
 
   // Get an input event of this key.
   bool GetFiltered(InputKey k, InputEvent* e);

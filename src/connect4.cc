@@ -111,16 +111,67 @@ void WaitForUp(InputEvent down) {
 void ShowMessage(const char* msg) {
   g_display.Show(msg);
   delay(kShowMessageTimeoutMs);
+  g_input.Flush();
 }
 
-bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
+struct UserMove {
+  UserMove() : column(-1), row(-1), selection_ms(0) {}
+
+  bool IsSet() const {
+    return column >= 0;
+  }
+
+  bool IsSettled() const {
+    return millis() - selection_ms >= kUserSwitchColumnTimeoutMs;
+  }
+
+  void Reset() {
+    column = -1;
+    row = -1;
+    selection_ms = 0;
+  }
+
+  int column;
+  int row;
+  unsigned long selection_ms;
+};
+
+void UndoUserMove(Board* b, UserMove* user_move) {
+  if (!user_move->IsSet())
+    return;
+  b->UnAdd(user_move->column);
+  user_move->Reset();
+}
+
+enum BotResult {
+  kBotMoved,
+  kBotTurnUserDoOver,
+  kBotSignalExit
+};
+
+BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
+                        UserMove* user_move) {
   int bot_row;
   InputEvent e;
   SimpleObserver o;
+  g_display.Show("Bot is thinking...");
   bot->FindNextMove(b, &o);
   if (!o.success || !b->Add(o.column, disc, &bot_row)) {
     ShowMessage("Bot failed.");
-    return false;
+    return kBotSignalExit;
+  }
+  // Now remove the chip until we really have placed it.
+  b->UnAdd(o.column);
+
+  // Continue waiting for the user's move to settle (enough time to pass).
+  // We promise to give the user a settle time to drop their disc and
+  // move their hand away before we move the dropper. If we are running a
+  // slow bot, enough time will have already passed.
+  while (!user_move->IsSettled()) {
+    yield();
+    if (g_input.Peek(&e)) {
+      return kBotTurnUserDoOver;
+    }
   }
 
   bool successful_move = false;
@@ -131,30 +182,49 @@ bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
     strcat(g_string, b->GetCellLocator(bot_row, o.column));
     g_display.Show(g_string);
 
-    if (!g_dropper.MoveToColumn(o.column) ||
-        !g_dropper.DropAndWait()) {
+    if (!g_dropper.MoveToColumn(o.column) || !g_dropper.DropAndWait()) {
       if (g_input.Get(&e)) {
         if (e.IsKeyDown(kYesButtonKey) ||
             e.IsKeyDown(kNoButtonKey)) {
           WaitForUp(e);
+          if (user_move->IsSet()) {
+            strcpy(g_string, "Was ");
+            strcat(g_string, b->GetCellLocator(user_move->row, user_move->column));
+            strcat(g_string, " your last move?");
+            if (!AskYesNo(g_string)) {
+              UndoUserMove(b, user_move);
+              g_display.Show("Realigning, please wait...");
+              if (!g_dropper.MoveToColumn(g_dropper.GetClosestColumn())) {
+                ShowMessage("Sorry, too many mistakes.");
+                return kBotSignalExit;
+              }
+              return kBotTurnUserDoOver;
+            }
+          }
           if (AskYesNo(kExitGameEarly)) {
-            return false;
+            return kBotSignalExit;
           }
           continue;
         } else if (e.key == kHomeSwitchKey) {
           ShowMessage("Home key pushed. Failed.");
-          return false;
+          return kBotSignalExit;
+        } else if (e.kind == kKeyDown && user_move->IsSet()) {
+          // User moves while the bot is moving. Let's assume they aren't
+          // cheating and they moved their disc from where we thought
+          // they last put it.
+          UndoUserMove(b, user_move);
+          return kBotTurnUserDoOver;
         } else {
-          ShowMessage("You cheated. Bot quits!");
-          return false;
+          ShowMessage("I am confused! Ending game.");
+          return kBotSignalExit;
         }
       } else {
-        if (AskYesNo("Please fill hopper. OK?")) {
+        if (AskYesNo("Refill the hopper. Ready?")) {
           g_dropper.Reset();
           continue;
         } else {
           ShowMessage("Quitting.");
-          return false;
+          return kBotSignalExit;
         }
       }
     }
@@ -163,23 +233,24 @@ bool HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc) {
     successful_move = true;
   }
 
-  return true;
+  if (!b->Add(o.column, disc)) {
+    ShowMessage("Bot failed post");
+    return kBotSignalExit;
+  }
+  return kBotMoved;
 }
 
-bool HandleUserTurn(Board* b, CellContents disc) {
+bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
   InputEvent e;
-  unsigned long last_selection_ms = 0;
-  int last_selection_column = -1;
   g_display.Show(kYourTurn);
 
-  while (last_selection_column == -1 ||
-         millis() - last_selection_ms < kUserSwitchColumnTimeoutMs) {
+  user_move->Reset();
+
+  while (!user_move->IsSet()) {
     yield();
     if (!g_input.Get(&e) || e.kind == kKeyDown) {
       continue;
     }
-    Serial.print(millis());
-    Serial.println(", user touched");
 
     switch (e.key) {
       case kYesButtonKey:
@@ -204,8 +275,9 @@ bool HandleUserTurn(Board* b, CellContents disc) {
           continue;
         }
         b->UnAdd(user_column);
-        last_selection_column = user_column;
-        last_selection_ms = millis();
+        user_move->column = user_column;
+        user_move->row = user_row;
+        user_move->selection_ms = millis();
         strcpy(g_string, "You pick ");
         strcat(g_string, b->GetCellLocator(user_row, user_column));
         g_display.Show(g_string);
@@ -214,7 +286,7 @@ bool HandleUserTurn(Board* b, CellContents disc) {
     }
   }
 
-  b->Add(last_selection_column, disc);
+  b->Add(user_move->column, disc);
   return true;
 }
 
@@ -255,10 +327,13 @@ void RunGame(PlayerBot* bot) {
 
   Board b;
   bool is_draw;
+  UserMove user_move;
 
   while (true) {
-    if (!HandleBotTurn(&b, bot, kRedDisc))
-      return;
+    BotResult bot_result = HandleBotTurn(&b, bot, kRedDisc, &user_move);
+
+    if (bot_result == kBotSignalExit)
+      break;
 
     if (b.IsTerminal(&is_draw)) {
       if (is_draw)
@@ -268,7 +343,7 @@ void RunGame(PlayerBot* bot) {
       return;
     }
 
-    if (!HandleUserTurn(&b, kYellowDisc))
+    if (!HandleUserTurn(&b, kYellowDisc, &user_move))
       return;
 
     if (b.IsTerminal(&is_draw)) {

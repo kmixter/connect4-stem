@@ -27,6 +27,9 @@ class DropperController {
  	// Gets the column the truck is currently at, or -1 if unknown or misaligned.
 	int GetColumn() const;
 
+	// Gets the closest column the truck is currently at.
+	int GetClosestColumn() const;
+
  private:
   Adafruit_MotorShield motors_;
   Adafruit_StepperMotor* stepper_;
