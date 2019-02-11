@@ -4,8 +4,8 @@
 #include "maxbot.h"
 #include <gtest/gtest.h>
 
-#define M3 1
-#define M2 1
+#define M3 MaxBot::kBonusCount[2]
+#define M2 MaxBot::kBonusCount[1]
 
 class MaxBotTest : public testing::Test {
  protected:
@@ -87,7 +87,7 @@ TEST_F(MaxBotTest, HeuristicSoonLosses) {
                                "_ _ _ R R _ _\n"
                                "_ _ R Y Y Y _\n"
                                "_ _ Y R Y R _\n"));
-  EXPECT_EQ((/*hrz*/(4 + 4 + 4) + /*vert*/(2) + /*bs*/(3+2*M2) + /*slash*/(2+3+2*M2+1)) -
+  EXPECT_EQ((/*hrz*/(4 + 4 + 1 + 3*M2) + /*vert*/(2) + /*bs*/(3+2*M2) + /*slash*/(2+3+2*M2+1)) -
             (/*hrz*/(4 + M3) + /*vert*/(1) + /*bs*/(2+M2) + /*slash*/(1)),
             bot_->ComputeHeuristic(&b_)); 
 
@@ -240,11 +240,14 @@ TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
   ResetBot(kRedDisc, 2);
   bot_->FindNextMove(&b_, &o);
   ASSERT_TRUE(o.success);
-  EXPECT_EQ(2, o.column);
-  EXPECT_EQ(7 * 7, o.states.size());
-  EXPECT_EQ(-1, o.heuristic);
-  int search[] = {2, 2};
+  EXPECT_EQ(4, o.column);
+  EXPECT_EQ(7 * 7U, o.states.size());
+  b_.Add(4, kRedDisc);
+  b_.Add(5, kYellowDisc);
+  int expected = bot_->ComputeHeuristic(&b_);
+  EXPECT_EQ(expected, o.heuristic);
+  int search[] = {4, 5};
   auto s = o.Find(2, search);
   ASSERT_TRUE(s != nullptr);
-  EXPECT_EQ(-1, s->heuristic);
+  EXPECT_EQ(expected, s->heuristic);
 }

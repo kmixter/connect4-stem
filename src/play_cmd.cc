@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -9,6 +10,12 @@
 #include "prng.h"
 #include "rule3bot.h"
 #include "randombot.h"
+
+uint64_t GetMicros() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return (uint64_t)tv.tv_sec * 1000000 + (uint64_t)tv.tv_usec;
+}
 
 enum GameResult {
   kRedWinGame,
@@ -71,8 +78,10 @@ void PrintBoard(Board* b) {
 GameResult RunGame(PlayerBot** player, int* plies) {
   Board b;
   *plies = 0;
+  uint64_t accum_time[2] = {0};
+  int turns[2] = {0};
+
   while (!b.IsTerminal()) {
-    int column;
     for (int num = int(kRedDisc); num <= int(kYellowDisc); ++num) {
       PrintBoard(&b);
       if (b.IsTerminal())
@@ -80,7 +89,12 @@ GameResult RunGame(PlayerBot** player, int* plies) {
       printf("%s Player Go!\n", b.GetContentsName(CellContents(num)));
       PlayerBot* current = player[num - int(kRedDisc)];
       SimpleObserver o;
+      auto start = GetMicros();
       current->FindNextMove(&b, &o);
+      auto elapsed = GetMicros() - start;
+      printf("\nTime to find next move: %luus\n", elapsed);
+      accum_time[num - int(kRedDisc)] += elapsed;
+      ++turns[num - int(kRedDisc)];
       if (!o.success) {
         fprintf(stderr, "Find next move failed!\n");
         exit(kErrorGame);
@@ -93,6 +107,10 @@ GameResult RunGame(PlayerBot** player, int* plies) {
     }
   }
   PrintBoard(&b);
+  for (int i = 0; i < 2; ++i) {
+    printf("%s player average turn time: %luus\n",
+           (i ? "Yellow" : "Red"), accum_time[i] / turns[i]);
+  }
   int win_row, win_col, win_delta_row, win_delta_col;
   if (!b.FindAnyWin(&win_row, &win_col, &win_delta_row, &win_delta_col)) {
     printf("Tie game!\n");
@@ -136,6 +154,8 @@ int main(int argc, char* argv[]) {
       case kTieGame:
         ++tie_games;
         break;
+      case kErrorGame:
+        return int(kErrorGame);
     }
     total_plies += plies;
   }

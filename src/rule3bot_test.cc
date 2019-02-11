@@ -11,7 +11,6 @@ class Rule3Test : public testing::Test {
   }
 
   bool PlayMove() {
-    int col;
     SimpleObserver o;
     bot_->FindNextMove(&b_, &o);
     return o.success && b_.Add(o.column, kRedDisc);

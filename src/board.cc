@@ -2,6 +2,16 @@
 
 #include <string.h>
 
+Board::Board() {
+  for (int r = 0; r < 6; ++r) {
+    for (int c = 0; c < 7; ++c) {
+      contents_[r][c] = kEmpty;
+    }
+  }
+  for (int c = 0; c < 7; ++c)
+    top_contents_[c] = -1;
+}
+
 #ifdef TESTING
 string Board::ToString() const {
 	string output;
@@ -44,6 +54,8 @@ bool Board::SetFromString(const string& s) {
 		else
 			return false;
 		++i;
+    if (contents_[r][c] != kEmpty && top_contents_[c] < 0)
+      top_contents_[c] = r;
 		if (c == 6) {
 			if (s[i] != '\n')
 				return false;
@@ -72,27 +84,18 @@ const char* Board::GetContentsName(CellContents disc) {
 #endif  // TESTING
 
 bool Board::Add(int column, CellContents disc, int* out_row) {
-  if (disc != kRedDisc && disc != kYellowDisc) return false;
-  if (column < 0 || column > 6) return false;
-  int top;
-  for (top = 5; top >= 0; --top)
-    if (contents_[top][column] != kEmpty) break;
-  if (top == 5) return false;
-  contents_[top + 1][column] = disc;
+  if (top_contents_[column] == 5) return false;
+  ++top_contents_[column];
+  contents_[top_contents_[column]][column] = disc;
   if (out_row != nullptr)
-  	*out_row = top + 1;
+    *out_row = top_contents_[column];
   return true;
 }
 
-bool Board::UnAdd(int column, int* out_row) {
-  if (column < 0 || column > 6) return false;
-  int top;
-  for (top = 5; top >= 0; --top)
-    if (contents_[top][column] != kEmpty) break;
-  if (top < 0) return false;
-  contents_[top][column] = kEmpty;
-  if (out_row != nullptr)
-  	*out_row = top;
+bool Board::UnAdd(int column) {
+  if (top_contents_[column] < 0) return false;
+  contents_[top_contents_[column]][column] = kEmpty;
+  --top_contents_[column];
   return true;
 }
 

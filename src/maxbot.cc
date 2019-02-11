@@ -2,11 +2,14 @@
 
 #include "prng.h"
 
+// There are 69 4-streaks within a 7x6 connect4 board.
 static const int kMaxHeuristic = 10000;
+const int MaxBot::kBonusCount[] = { 1, 10, 140, 0 };
 
 // H(color) = all possible available wins for that color that involve
 // at least one piece for that color on the board. Heuristic returned
 // is H(red) - H(yellow).
+ __attribute__((optimize("O2")))
 int MaxBot::ComputeHeuristic(Board* b) const {
   int value = 0;
   for (int row = 0; row < 6; ++row) {
@@ -15,19 +18,19 @@ int MaxBot::ComputeHeuristic(Board* b) const {
         for (int dc = -1; dc < 2; ++dc) {
           if (dr == 0 && dc != 1) continue;
           // For each cell in the grid, for each of the 4 canonical directions:
-          bool any_yellow = false;
-          bool any_red = false;
+          int yellow_count = 0;
+          int red_count = 0;
           int r = row, c = col;
           //printf("(%d,%d) (%d,%d): ", row, col, dr, dc);
           int dist = 0;
           while (true) {
             //printf("%c", b->contents_[r][c] == kRedDisc ? 'R' : (b->contents_[r][c] == kYellowDisc ? 'Y' : '_'));
             if (b->contents_[r][c] == kRedDisc) {
-              any_red = true;
-              if (any_yellow) break;
+              ++red_count;
+              if (yellow_count) break;
             } else if (b->contents_[r][c] == kYellowDisc) {
-              any_yellow = true;
-              if (any_red) break;
+              ++yellow_count;
+              if (red_count) break;
             }
             ++dist;
             if (dist == 4) break;
@@ -37,11 +40,11 @@ int MaxBot::ComputeHeuristic(Board* b) const {
               break;
           }
           if (dist == 4) {
-            if (any_yellow ^ any_red) {
-              if (any_yellow)
-                --value;
+            if ((red_count > 0) != (yellow_count > 0)) {
+              if (yellow_count)
+                value -= kBonusCount[yellow_count - 1];
               else
-                ++value;
+                value += kBonusCount[red_count - 1];
             }
           }
           //printf(" (dist%d) -> %d\n", dist, value);

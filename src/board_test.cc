@@ -122,9 +122,7 @@ TEST_F(BoardTest, UnAdd) {
                                "_ _ R Y _ _ _\n"));
   EXPECT_FALSE(b_.UnAdd(0));
   EXPECT_FALSE(b_.UnAdd(1));
-  int row;
-  ASSERT_TRUE(b_.UnAdd(2, &row));
-  EXPECT_EQ(2, row);
+  ASSERT_TRUE(b_.UnAdd(2));
   ASSERT_EQ("_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"
             "_ _ _ _ _ _ _\n"

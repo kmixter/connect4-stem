@@ -1,6 +1,8 @@
 #ifndef _CONNECT4_BOARD_H
 #define _CONNECT4_BOARD_H
 
+#include <stdint.h>
+
 #ifdef TESTING
 #include <string>
 using std::string;
@@ -15,11 +17,7 @@ enum CellContents {
 
 class Board {
  public:
-  Board() {
-    for (auto r = 0; r < 6; ++r)
-      for (auto c = 0; c < 7; ++c)
-        contents_[r][c] = kEmpty;
-  }
+  Board();
 
 #ifdef TESTING
   string ToString() const;
@@ -27,7 +25,7 @@ class Board {
 #endif  // TESTING
 
   bool Add(int column, CellContents disc, int* row = nullptr);
-  bool UnAdd(int column, int* row = nullptr);
+  bool UnAdd(int column);
   int FindMaxStreakAt(int start_row, int start_column) const;
 
   // Find a win. There is ambiguity about direction. Horizontal, vertical, slash, and backslash all
@@ -61,6 +59,7 @@ class Board {
 
   // Bottom of board is row 0, top row 5.
   CellContents contents_[6][7];
+  int8_t top_contents_[7];
 };
 
 #endif  // _CONNECT4_BOARD_H

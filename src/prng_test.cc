@@ -37,7 +37,7 @@ TEST_F(SmallPRNGTest, Roll) {
 
   for (int i = 0; i < 100; ++i) {
     uint32_t num = prng_->Roll(7);
-    ASSERT_LT(num, 7);
+    ASSERT_LT(num, 7U);
     if (!x[num]) {
       x[num] = true;
       ++reached;
@@ -92,5 +92,5 @@ class NotAtAllRandomTest : public testing::Test {
 
 TEST_F(NotAtAllRandomTest, Always) {
   for (int i = 0; i < 100; ++i)
-    ASSERT_EQ(1, prng_->Get());
+    ASSERT_EQ(1U, prng_->Get());
 }

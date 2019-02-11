@@ -1,4 +1,5 @@
-CXXFLAGS += -std=c++11 -I googletest/include -I googletest -DTESTING
+CXXFLAGS += -std=c++11 -I googletest/include -I googletest -DTESTING \
+			-Wall -Werror
 O = out/host
 COMMON = $(O)/board.o $(O)/rule3bot.o $(O)/input_manager.o $(O)/prng.o \
 		 $(O)/randombot.o $(O)/maxbot.o

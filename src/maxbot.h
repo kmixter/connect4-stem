@@ -6,6 +6,7 @@
 class MaxBot : public PlayerBot {
  public:
   static const int kMaxLookahead = 8;
+  static const int kBonusCount[4];
   MaxBot(CellContents disc, int lookahead, PRNG* prng) 
     : PlayerBot("Superbot", disc, prng), lookahead_(lookahead) {}
 
