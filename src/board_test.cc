@@ -271,3 +271,127 @@ TEST_F(BoardTest, IsTerminalDraw) {
   ASSERT_TRUE(b_.IsTerminal(&is_draw));
   EXPECT_TRUE(is_draw);
 }
+
+const char* ExpandBitmap(const uint8_t* bits) {
+  static char result[28 * 16 + 1] = {0};
+  char* p = result;
+
+  for (int choff = 4; choff >= 0; choff -= 4) {
+    for (int line = 0; line < 8; ++line) {
+      for (int lch = 0; lch < 4; ++lch) {
+        int ch = choff + lch;
+        for (int b = 4; b >= 0; --b) {
+          *p = bits[8 * ch + line] & (1 << b) ? '.' : ' ';
+          ++p;
+        }
+        if (lch % 4 != 3) {
+          *p++ = ' ';
+          *p++ = ' ';
+        } else {
+          *p++ = '\n';
+        }
+      }
+    }
+  }
+  *p++ = 0;
+  return result;
+}
+
+TEST_F(BoardTest, GetBitmap) {
+  EXPECT_STREQ("                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n",
+               ExpandBitmap(b_.GetBitmap()));
+
+  ASSERT_TRUE(b_.SetFromString("R R R R R R R\n"
+                               "R R R R R R R\n"
+                               "R R R R R R R\n"
+                               "R R R R R R R\n"
+                               "R R R R R R R\n"
+                               "R R R R R R R\n"));
+
+  EXPECT_STREQ(".. ..  .. ..  .. ..  ..   \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               "                          \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               "                          \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+
+               ".. ..  .. ..  .. ..  ..   \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               "                          \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               "                          \n"
+               ".. ..  .. ..  .. ..  ..   \n"
+               ".. ..  .. ..  .. ..  ..   \n",
+               ExpandBitmap(b_.GetBitmap()));
+
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ R Y _ _ _\n"
+                               "_ _ R Y _ _ _\n"
+                               "_ _ R Y _ _ _\n"));
+
+  EXPECT_STREQ("                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+               "                          \n"
+
+               "       .. ..              \n"
+               "       ..  .              \n"
+               "                          \n"
+               "       .. ..              \n"
+               "       ..  .              \n"
+               "                          \n"
+               "       .. ..              \n"
+               "       ..  .              \n",
+               ExpandBitmap(b_.GetBitmap()));
+
+  ASSERT_TRUE(b_.SetFromString("_ _ R _ _ _ _\n"
+                               "_ _ R _ _ _ _\n"
+                               "_ _ R _ _ _ _\n"
+                               "_ _ Y R _ _ _\n"
+                               "_ _ R Y _ _ _\n"
+                               "_ Y Y R Y R R\n"));
+
+  EXPECT_STREQ("       ..                 \n"
+               "       ..                 \n"
+               "                          \n"
+               "       ..                 \n"
+               "       ..                 \n"
+               "                          \n"
+               "       ..                 \n"
+               "       ..                 \n"
+
+               "       .. ..              \n"
+               "        . ..              \n"
+               "                          \n"
+               "       .. ..              \n"
+               "       ..  .              \n"
+               "                          \n"
+               "   ..  .. ..  .. ..  ..   \n"
+               "    .   . ..   . ..  ..   \n",
+               ExpandBitmap(b_.GetBitmap()));
+}

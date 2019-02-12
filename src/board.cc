@@ -221,3 +221,37 @@ const char* Board::GetWinLocator() {
   }
   return result;
 }
+
+uint8_t* Board::GetBitmap() const {
+  static uint8_t cbits[8 * 8];
+  memset(cbits, 0, 64);
+  for (int row = 0; row < 6; ++row) {
+    for (int col = 0; col < 7; ++col) {
+      int ch = 0;
+      int line = 0;
+      if (row >= 3)
+        ch = 4;
+      ch += col / 2;
+      if (row >= 3) {
+        line = 6 - (row-3)*3;
+      } else {
+        line = 6 - row*3;
+      }
+      int shift = (col % 2 == 0) ? 3 : 0;
+      //printf("(%d,%d) -> (%d,%d,%d)\n", row, col, ch, line, shift);
+      switch (Get(row, col)) {
+        case kRedDisc:
+          cbits[ch * 8 + line + 0] |= 0x3 << shift;
+          cbits[ch * 8 + line + 1] |= 0x3 << shift;
+          break;
+        case kYellowDisc:
+          cbits[ch * 8 + line + 0] |= 0x3 << shift;
+          cbits[ch * 8 + line + 1] |= 0x1 << shift;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  return cbits;
+}

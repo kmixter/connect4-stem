@@ -49,6 +49,8 @@ class Board {
     return kError;
   }
 
+  uint8_t* GetBitmap() const;
+
 #ifdef TESTING
   static const char* GetContentsName(CellContents disc);
 #endif

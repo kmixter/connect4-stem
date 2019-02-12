@@ -267,7 +267,8 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
     o.Reset();
     strcpy(g_string, bot->GetName());
     strcat(g_string, " is thinking");
-    g_display.Show(g_string);
+    g_display.Show(g_string, true);
+    g_display.UpdateBoardBitmap(b->GetBitmap());
     unsigned long bot_start_ms = millis();
     DumpBoardToSerial(b, "Bot board");
     bot->FindNextMove(b, &o);
@@ -317,7 +318,7 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
     strcpy(g_string, bot->GetName());
     strcat(g_string, " picks ");
     strcat(g_string, b->GetCellLocator(bot_row, o.column));
-    g_display.Show(g_string);
+    g_display.Show(g_string, true);
 
     if (!g_dropper.MoveToColumn(o.column) || !g_dropper.DropAndWait()) {
       if (g_input.Get(&e)) {
@@ -348,14 +349,23 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
 
 bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
   InputEvent e;
-  g_display.Show(kYourTurn);
   DumpBoardToSerial(b, "Your board");
+  g_display.Show(kYourTurn, true);
+  g_display.UpdateBoardBitmap(b->GetBitmap());
 
   user_move->Reset();
 
   while (!user_move->IsSet()) {
     yield();
-    if (!g_input.Get(&e) || e.kind == kKeyDown) {
+    if (!g_input.Get(&e))
+      continue;
+    if (e.kind == kKeyDown) {
+      int column = e.key - int(kColumn0Key);
+      Serial.println("Showing immediate board update");
+      if (column >=0 && column <= kColumn6Key && b->Add(column, disc)) {
+        g_display.UpdateBoardBitmap(b->GetBitmap());
+        b->UnAdd(column);
+      }
       continue;
     }
 
@@ -365,7 +375,8 @@ bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
       case kHomeSwitchKey:
         if (AskYesNo(kExitGameEarly))
           return false;
-        g_display.Show(kYourTurn);
+        g_display.Show(kYourTurn, true);
+        g_display.UpdateBoardBitmap(b->GetBitmap());
         break;
 
       case kColumn0Key:
@@ -377,18 +388,13 @@ bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
       case kColumn6Key: {
         int user_row;
         int user_column = e.key - kColumn0Key;
-        if (!b->Add(user_column, disc, &user_row)) {
-          strcpy(g_string, "Column X already full");
-          g_string[7] = '1' + user_column;
+        if (!b->Add(user_column, disc, &user_row))
           continue;
-        }
+
         b->UnAdd(user_column);
         user_move->column = user_column;
         user_move->row = user_row;
         user_move->selection_ms = millis();
-        strcpy(g_string, "You pick ");
-        strcat(g_string, b->GetCellLocator(user_row, user_column));
-        g_display.Show(g_string);
         break;
       }
 
