@@ -13,6 +13,7 @@ class PlayerBot {
    public:
     enum Kind {
       kHeuristicDone,
+      kParentDone,
       kMoveDone,
       kNoMovePossible
     };

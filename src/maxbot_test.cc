@@ -4,8 +4,8 @@
 #include "maxbot.h"
 #include <gtest/gtest.h>
 
-#define M3 MaxBot::kBonusCount[2]
-#define M2 MaxBot::kBonusCount[1]
+#define M3 MaxBot::kStreakWeight[2]
+#define M2 MaxBot::kStreakWeight[1]
 
 class MaxBotTest : public testing::Test {
  protected:
@@ -192,11 +192,9 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
 class RecordingObserver : public SimpleObserver {
  public:
   bool Observe(PlayerBot::Observer::State* s) {
-    if (s->kind == kHeuristicDone) {
-      states.push_back(*s);
-      states.back().moves = new uint8_t[MaxBot::kMaxLookahead];
-      memcpy(states.back().moves, s->moves, MaxBot::kMaxLookahead);
-    }
+    states.push_back(*s);
+    states.back().moves = new uint8_t[MaxBot::kMaxLookahead];
+    memcpy(states.back().moves, s->moves, MaxBot::kMaxLookahead);
     if (s->kind == kMoveDone) {
       heuristic = s->heuristic;
     }
@@ -218,9 +216,23 @@ class RecordingObserver : public SimpleObserver {
 
   void Dump() {
     for (auto i : states) {
-      for (int j = i.depth - 1; j >= 0; --j)
+      for (int j = 0; j < i.depth; ++j)
         printf("%d -> ", i.moves[j]);
-      printf("heuristic %ld\n", i.heuristic);
+      switch (i.kind) {
+        case kMoveDone:
+          printf("MoveDone");
+          break;
+        case kHeuristicDone:
+          printf("HeuristicDone");
+          break;
+        case kParentDone:
+          printf("ParentDone");
+          break;
+        case kNoMovePossible:
+          printf("NoMovePossible");
+          break;
+      }
+      printf(" %ld\n", i.heuristic);
     }      
   }
 
@@ -241,7 +253,7 @@ TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
   bot_->FindNextMove(&b_, &o);
   ASSERT_TRUE(o.success);
   EXPECT_EQ(4, o.column);
-  EXPECT_EQ(7 * 7U, o.states.size());
+  EXPECT_EQ(7 * 7U + 7 /* ParentDones */ + 1 /* MoveDone */, o.states.size());
   b_.Add(4, kRedDisc);
   b_.Add(5, kYellowDisc);
   int expected = bot_->ComputeHeuristic(&b_);
@@ -250,4 +262,17 @@ TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
   auto s = o.Find(2, search);
   ASSERT_TRUE(s != nullptr);
   EXPECT_EQ(expected, s->heuristic);
+}
+
+TEST_F(MaxBotTest, DoNotTaunt) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "Y _ Y Y Y _ _\n"
+                               "Y _ R R R _ _\n"));
+  RecordingObserver o;
+  bot_->FindNextMove(&b_, &o);
+  o.Dump();
+  EXPECT_EQ(1, o.column);
 }

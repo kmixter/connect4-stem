@@ -135,7 +135,7 @@ void ShowMessage(const char* msg) {
 }
 
 struct UserMove {
-  UserMove() : column(-1), row(-1), selection_ms(0) {}
+  UserMove() : column(-1), row(-1), selection_ms(0), done_showing(false) {}
 
   bool IsSet() const {
     return column >= 0;
@@ -149,11 +149,13 @@ struct UserMove {
     column = -1;
     row = -1;
     selection_ms = 0;
+    done_showing = false;
   }
 
   int column;
   int row;
   unsigned long selection_ms;
+  bool done_showing;
 };
 
 void UndoUserMove(Board* b, UserMove* user_move) {
@@ -161,6 +163,21 @@ void UndoUserMove(Board* b, UserMove* user_move) {
     return;
   b->UnAdd(user_move->column);
   user_move->Reset();
+}
+
+void ShowUserMove(PlayerBot* bot, Board* b, UserMove* user_move) {
+  if (user_move->IsSet() && !user_move->done_showing) {
+    strcpy(g_string, "You moved to ");
+    strcat(g_string, Board::GetCellLocator(user_move->row, user_move->column));
+    g_display.Show(g_string, true);
+    if (user_move->IsSettled())
+      user_move->done_showing = true;
+  } else {
+    strcpy(g_string, bot->GetName());
+    strcat(g_string, " is thinking");
+    g_display.Show(g_string, true);
+    g_display.UpdateBoardBitmap(b->GetBitmap());
+  }
 }
 
 enum BotResult {
@@ -172,6 +189,8 @@ enum BotResult {
 
 class InterruptableObserver : public SimpleObserver {
  public:
+  InterruptableObserver() {}
+
   bool Observe(PlayerBot::Observer::State* s) {
     InputEvent e;
     yield();
@@ -181,17 +200,20 @@ class InterruptableObserver : public SimpleObserver {
     }
     if (s->kind == kHeuristicDone) {
       ++heuristics_computed;
-      if (heuristics_computed % 100 == 1)
-        Serial.println("100 more heuristics");
-      return true;
-    } else {
+      if (heuristics_computed % 200 == 1) {
+        Serial.println("200 more heuristics");
+      }
+    } else if (s->kind == kMoveDone) {
+      heuristic = s->heuristic;
       return SimpleObserver::Observe(s);
     }
+    return true;
   }
   void Reset() {
     heuristics_computed = 0;
   }
 
+  int heuristic = 0;
   int heuristics_computed = 0;
 };
 
@@ -265,9 +287,7 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
 
   while (true) {
     o.Reset();
-    strcpy(g_string, bot->GetName());
-    strcat(g_string, " is thinking");
-    g_display.Show(g_string, true);
+    ShowUserMove(bot, b, user_move);
     g_display.UpdateBoardBitmap(b->GetBitmap());
     unsigned long bot_start_ms = millis();
     DumpBoardToSerial(b, "Bot board");
@@ -277,7 +297,8 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
       Serial.print(millis() - bot_start_ms);
       Serial.print("ms and computed ");
       Serial.print(o.heuristics_computed);
-      Serial.println(" heuristics");
+      Serial.print(" heuristics, final ");
+      Serial.println(o.heuristic);
       break;
     }
     if (!g_input.Peek(&e)) {
@@ -318,6 +339,7 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
     strcpy(g_string, bot->GetName());
     strcat(g_string, " picks ");
     strcat(g_string, b->GetCellLocator(bot_row, o.column));
+    g_display.UpdateBoardBitmap(b->GetBitmap());
     g_display.Show(g_string, true);
 
     if (!g_dropper.MoveToColumn(o.column) || !g_dropper.DropAndWait()) {
@@ -347,7 +369,7 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
   return kBotMoved;
 }
 
-bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
+bool HandleUserTurn(Board* b, PlayerBot* bot, CellContents disc, UserMove* user_move) {
   InputEvent e;
   DumpBoardToSerial(b, "Your board");
   g_display.Show(kYourTurn, true);
@@ -395,6 +417,8 @@ bool HandleUserTurn(Board* b, CellContents disc, UserMove* user_move) {
         user_move->column = user_column;
         user_move->row = user_row;
         user_move->selection_ms = millis();
+        g_display.UpdateBoardBitmap(b->GetBitmap());
+        ShowUserMove(bot, b, user_move);
         break;
       }
 
@@ -460,7 +484,7 @@ void RunGame(PlayerBot* bot) {
       return;
     }
 
-    if (!HandleUserTurn(&b, kYellowDisc, &user_move))
+    if (!HandleUserTurn(&b, bot, kYellowDisc, &user_move))
       return;
 
     if (b.IsTerminal(&is_draw)) {

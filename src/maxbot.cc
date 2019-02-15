@@ -2,9 +2,13 @@
 
 #include "prng.h"
 
-// There are 69 4-streaks within a 7x6 connect4 board.
-static const int kMaxHeuristic = 10000;
-const int MaxBot::kBonusCount[] = { 1, 10, 140, 0 };
+// There are 69 4-streaks within a 7x6 connect4 board. Make sure that
+// all streaks of 3 (which have highest weight below) does not overflow
+// max heuristic. Also note that the depth will be subtracted from the
+// max heuristic so that we favor moves that result in inevitable win/loss
+// sooner (avoid taunting or delaying inevitable).
+static const int kMaxHeuristic = 20000;
+const int MaxBot::kStreakWeight[] = { 1, 10, 140, 0 };
 
 // H(color) = all possible available wins for that color that involve
 // at least one piece for that color on the board. Heuristic returned
@@ -42,9 +46,9 @@ int MaxBot::ComputeHeuristic(Board* b) const {
           if (dist == 4) {
             if ((red_count > 0) != (yellow_count > 0)) {
               if (yellow_count)
-                value -= kBonusCount[yellow_count - 1];
+                value -= kStreakWeight[yellow_count - 1];
               else
-                value += kBonusCount[red_count - 1];
+                value += kStreakWeight[red_count - 1];
             }
           }
           //printf(" (dist%d) -> %d\n", dist, value);
@@ -62,36 +66,43 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
   bool one_considered = false;
   bool is_min = disc == kYellowDisc;
 
+  uint8_t* move_pointer = &state_.moves[lookahead_ - lookahead];
   --lookahead;
 
   for (int col = 0; col < 7; ++col) {
     int row;
     int value;
-    state_.moves[lookahead] = col;
+    *move_pointer = col;
     if (!b->Add(col, disc, &row))
       continue;
     //printf("%d: Trying column %d, disc %d:\n", lookahead, col, disc);
     //printf("%s\n", b->ToString().c_str());
     bool just_won = b->FindMaxStreakAt(row, col) >= 4;
     if (just_won) {
-      // This player just won, do not bother recursing.
-      value = disc == kRedDisc ? kMaxHeuristic : -kMaxHeuristic;
-    } else if (lookahead > 0) {
+      // This player just won, do not bother recursing. Give max heuristic,
+      // with offset based on how far ahead this win/loss is (so if win/loss
+      // is inevitable we choose fewest moves to it.)
+      value = (disc == kRedDisc ? 1 : -1) *
+        (kMaxHeuristic - (lookahead_ - lookahead));
+      state_.kind = PlayerBot::Observer::kHeuristicDone;
+     } else if (lookahead > 0) {
       int opponent_col;
       if (!FindBestMove(b, o, b->GetOpposite(disc), lookahead,
                         &opponent_col, &value)) {
         // No available move, aka tie reached. So call this value 0. 
         value = 0;
       }
+      state_.kind = PlayerBot::Observer::kParentDone;
     } else {
       // lookahead = 0
       value = ComputeHeuristic(b);
       state_.kind = PlayerBot::Observer::kHeuristicDone;
       //printf("Heuristic is %d\n", value);
-      state_.heuristic = value;
-      if (!o->Observe(&state_)) {
-        interrupted_ = true;
-      }
+    }
+    state_.depth = lookahead_ - lookahead;
+    state_.heuristic = value;
+    if (!o->Observe(&state_)) {
+      interrupted_ = true;
     }
     b->UnAdd(col);
     //if (lookahead >= 0) printf("%d: value %d\n", lookahead, value);
