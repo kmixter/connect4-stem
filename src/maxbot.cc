@@ -56,7 +56,8 @@ int MaxBot::ComputeHeuristic(Board* b) const {
 }
 
 bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
-                          int lookahead, int* out_column, int* out_value) {
+                          int lookahead, int max_alternative,
+                          int min_alternative, int* out_column, int* out_value) {
   int extreme_value = 0;
   int extreme_column = 0;
   bool one_considered = false;
@@ -79,7 +80,8 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
     } else if (lookahead > 0) {
       int opponent_col;
       if (!FindBestMove(b, o, b->GetOpposite(disc), lookahead,
-                        &opponent_col, &value)) {
+                        max_alternative, min_alternative, &opponent_col,
+                        &value)) {
         // No available move, aka tie reached. So call this value 0. 
         value = 0;
       }
@@ -103,6 +105,43 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
       extreme_column = col;
       //if (lookahead >= 0) printf("%d: new extreme c%d, %d\n", lookahead, col, value);
     }
+    if (use_alphabeta_) {
+      bool prune = false;
+      if (is_min) {
+        if (value < min_alternative) {
+          //printf("%d: min_alternative was %d now %d\n", lookahead,
+          //       min_alternative, value);
+          min_alternative = value;
+        }
+        // If this option results in a value less than what
+        // maxifying player already has as an alternative,
+        // prune this tree.
+        prune = value < max_alternative;
+      } else {
+        if (value > max_alternative) {
+          //printf("%d: max_alternative was %d now %d\n", lookahead,
+          //       max_alternative, value);
+          max_alternative = value;
+        }
+        // If this option results in a value greater than what
+        // minifying player already has as an alternative,
+        // prune this tree.
+        prune = value > min_alternative;
+      }
+      //printf("!# alternative range: (%d,%d)\n", min_alternative, max_alternative);
+      if (prune) {
+        state_.kind = PlayerBot::Observer::kAlphaBetaPruneDone;
+        state_.heuristic = value;
+        if (!o->Observe(&state_)) {
+          // Interruption during this observation, like any
+          // other during this recursion
+          interrupted_ = true;
+        }
+        *out_column = extreme_column;
+        *out_value = extreme_value;
+        return true;
+      }
+    }
     // If this player can win by this move, no other move can be better.
     if (just_won || interrupted_)
       break;
@@ -122,7 +161,10 @@ void MaxBot::FindNextMove(Board* b, Observer* o) {
   state_.moves = moves_;
   state_.depth = lookahead_;
   interrupted_ = false;
-  if (!FindBestMove(b, o, my_disc_, lookahead_, &column, &value)) {
+  int max_alternative = -kMaxHeuristic;  // aka alpha
+  int min_alternative = kMaxHeuristic;   // aka beta
+  if (!FindBestMove(b, o, my_disc_, lookahead_, max_alternative,
+                    min_alternative, &column, &value)) {
     if (!interrupted_) {
       state_.kind = PlayerBot::Observer::kNoMovePossible;
       o->Observe(&state_);

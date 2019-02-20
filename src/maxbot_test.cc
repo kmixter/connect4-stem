@@ -11,11 +11,13 @@ class MaxBotTest : public testing::Test {
  protected:
   void SetUp() override {
     prng_.reset(new NotAtAllRandom(0));
-    ResetBot(kRedDisc, 4);
+    ResetBot(kRedDisc, 4, false);
   }
 
-  void ResetBot(CellContents disc, int lookahead) {
-    bot_.reset(new MaxBot(disc, lookahead, prng_.get()));    
+  void ResetBot(CellContents disc, int lookahead,
+                bool use_lookahead) {
+    bot_.reset(new MaxBot(disc, lookahead, prng_.get(),
+                          use_lookahead));
   }
 
   Board b_;
@@ -192,11 +194,9 @@ TEST_F(MaxBotTest, TestHeuristicsForOneBoard) {
 class RecordingObserver : public SimpleObserver {
  public:
   bool Observe(PlayerBot::Observer::State* s) {
-    if (s->kind == kHeuristicDone) {
-      states.push_back(*s);
-      states.back().moves = new uint8_t[MaxBot::kMaxLookahead];
-      memcpy(states.back().moves, s->moves, MaxBot::kMaxLookahead);
-    }
+    states.push_back(*s);
+    states.back().moves = new uint8_t[MaxBot::kMaxLookahead];
+    memcpy(states.back().moves, s->moves, MaxBot::kMaxLookahead);
     if (s->kind == kMoveDone) {
       heuristic = s->heuristic;
     }
@@ -220,7 +220,21 @@ class RecordingObserver : public SimpleObserver {
     for (auto i : states) {
       for (int j = i.depth - 1; j >= 0; --j)
         printf("%d -> ", i.moves[j]);
-      printf("heuristic %ld\n", i.heuristic);
+      switch (i.kind) {
+       case kHeuristicDone:
+        printf("HeuristicDone ");
+        break;
+       case kAlphaBetaPruneDone:
+        printf("AlphaBetaPruneDone ");
+        break;
+       case kMoveDone:
+        printf("MoveDone ");
+        break;
+       case kNoMovePossible:
+        printf("NoMovePossible ");
+        break;
+      }
+      printf("%ld\n", i.heuristic);
     }      
   }
 
@@ -237,11 +251,39 @@ TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
                                "_ Y R R _ _ _\n"));
 
   RecordingObserver o;
-  ResetBot(kRedDisc, 2);
+  ResetBot(kRedDisc, 2, false);
   bot_->FindNextMove(&b_, &o);
   ASSERT_TRUE(o.success);
   EXPECT_EQ(4, o.column);
-  EXPECT_EQ(7 * 7U, o.states.size());
+  EXPECT_EQ(7 * 7U + 1, o.states.size());
+  b_.Add(4, kRedDisc);
+  b_.Add(5, kYellowDisc);
+  int expected = bot_->ComputeHeuristic(&b_);
+  EXPECT_EQ(expected, o.heuristic);
+  int search[] = {4, 5};
+  auto s = o.Find(2, search);
+  ASSERT_TRUE(s != nullptr);
+  EXPECT_EQ(expected, s->heuristic);
+}
+
+TEST_F(MaxBotTest, TestFindNextMoveOnOneBoardWithAlphaBeta) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ Y _ _ _ _\n"
+                               "_ Y R R _ _ _\n"));
+
+  RecordingObserver o;
+  ResetBot(kRedDisc, 2, true);
+  bot_->FindNextMove(&b_, &o);
+  ASSERT_TRUE(o.success);
+  EXPECT_EQ(4, o.column);
+  // There are 3 alpha-beta prunings:
+  // 1) column 2 is worse than 1, discovered at 1 (prune 5)
+  // 2) column 3 is worse than 1, discovered at 3 (prune 3)
+  // 3) column 6 is worse than 5, discovered at 1 (prune 5)
+  EXPECT_EQ(7 * 7U + 1 - 5 - 3 - 5 + 3, o.states.size());
   b_.Add(4, kRedDisc);
   b_.Add(5, kYellowDisc);
   int expected = bot_->ComputeHeuristic(&b_);

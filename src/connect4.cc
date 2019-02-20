@@ -30,7 +30,7 @@ char g_string[64];
 SmallPRNG g_prng(0);
 RandomBot g_randombot(kRedDisc, &g_prng);
 Rule3Bot g_rule3bot(kRedDisc, &g_prng);
-MaxBot g_maxbot(kRedDisc, 4, &g_prng);
+MaxBot g_maxbot(kRedDisc, 4, &g_prng, false);
 
 void setup()
 {
