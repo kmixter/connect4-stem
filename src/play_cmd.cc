@@ -61,8 +61,11 @@ PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
   if (!strcasecmp(name, "rule3")) {
     return new Rule3Bot(disc, new SmallPRNG(time(nullptr)));
   }
-  if (!strcasecmp(name, "max")) {
-    return new MaxBot(disc, 4, new SmallPRNG(time(nullptr)));
+  if (!strncasecmp(name, "max", 3)) {
+    int depth = atoi(name + 3);
+    if (depth < 1)
+      depth = 4;
+    return new MaxBot(disc, depth, new SmallPRNG(time(nullptr)));
   }
   if (!strcasecmp(name, "user")) {
     return new CmdUser(disc);
