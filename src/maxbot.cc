@@ -187,3 +187,28 @@ void MaxBot::FindNextMove(Board* b, Observer* o) {
     o->Observe(&state_);
   }
 }
+
+int MaxBotConstantEvals::ComputeDepth(Board* b) {
+  int branch_factor = 0;
+  for (int i = 0; i < 7; ++i) {
+    if (b->Add(i, kRedDisc)) {
+      b->UnAdd(i);
+      ++branch_factor;
+    }
+  }
+
+  int predicted_evals = 1;
+  int depth;
+  for (depth = 1; depth <= kMaxLookahead; ++depth) {
+    predicted_evals *= branch_factor;
+    if (predicted_evals > max_evals_)
+      break;
+  }
+
+  return depth - 1;
+}
+
+void MaxBotConstantEvals::FindNextMove(Board* b, Observer* o) {
+  lookahead_ = ComputeDepth(b);
+  MaxBot::FindNextMove(b, o);
+}

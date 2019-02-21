@@ -17,6 +17,10 @@ uint64_t GetMicros() {
   return (uint64_t)tv.tv_sec * 1000000 + (uint64_t)tv.tv_usec;
 }
 
+uint64_t GetCpuMicros() {
+  return clock() * 1000000 / CLOCKS_PER_SEC;
+}
+
 enum GameResult {
   kRedWinGame,
   kYellowWinGame,
@@ -63,28 +67,60 @@ PlayerBot* FindPlayerBot(CellContents disc, const char* name) {
   }
   if (!strncasecmp(name, "max", 3)) {
     bool use_alphabeta = false;
-    if (name[3] == 'a') {
-      name += 4;
-      use_alphabeta = true;
-    } else {
-      name += 3;
+    bool use_constant_evals = false;
+    name += 3;
+    if (name[0] == 'e') {
+      ++name;
+      use_constant_evals = true;
     }
-    int depth = atoi(name);
-    if (depth < 1)
-      depth = 4;
-    return new MaxBot(disc, depth, new SmallPRNG(time(nullptr)),
-                      use_alphabeta);
+    if (name[0] == 'a') {
+      ++name;
+      use_alphabeta = true;
+    }
+    if (name[0] && !isdigit(name[0])) {
+      fprintf(stderr, "Unknown max bot config at %s\n", name);
+      exit(kErrorGame);
+    }
+    if (!use_constant_evals) {
+      int depth = atoi(name);
+      if (depth < 1)
+        depth = 4;
+      return new MaxBot(disc, depth, new SmallPRNG(time(nullptr)),
+                        use_alphabeta);
+    } else {
+      int evals = atoi(name);
+      if (evals < 100)
+        evals = 100;
+      return new MaxBotConstantEvals(disc, evals,
+                                     new SmallPRNG(time(nullptr)),
+                                     use_alphabeta);
+    }
   }
   if (!strcasecmp(name, "user")) {
     return new CmdUser(disc);
   }
   fprintf(stderr, "No bot named %s\n", name);
+  fprintf(stderr, "Allowed: random, rule3, max[e][a], user\n");
   exit(kErrorGame);
 }
 
 void PrintBoard(Board* b) {
   printf("%s\nA B C D E F G\n\n", b->ToString().c_str());
 }
+
+class StatsObserver : public SimpleObserver {
+ public:
+  bool Observe(PlayerBot::Observer::State* s) {
+    if (s->kind == kHeuristicDone) {
+      ++count;
+      if (s->depth > max_depth)
+        max_depth = s->depth;
+    }
+    return SimpleObserver::Observe(s);
+  }
+  int count = 0;
+  int max_depth = 0;
+};
 
 GameResult RunGame(PlayerBot** player, int* plies) {
   Board b;
@@ -99,11 +135,12 @@ GameResult RunGame(PlayerBot** player, int* plies) {
         break;
       printf("%s Player Go!\n", b.GetContentsName(CellContents(num)));
       PlayerBot* current = player[num - int(kRedDisc)];
-      SimpleObserver o;
-      auto start = GetMicros();
+      StatsObserver o;
+      auto start = GetCpuMicros();
       current->FindNextMove(&b, &o);
-      auto elapsed = GetMicros() - start;
-      printf("\nTime to find next move: %luus\n", elapsed);
+      auto elapsed = GetCpuMicros() - start;
+      printf("\nTime to find next move: %luus, %d heuristics, %d depth\n",
+             elapsed, o.count, o.max_depth);
       accum_time[num - int(kRedDisc)] += elapsed;
       ++turns[num - int(kRedDisc)];
       if (!o.success) {
