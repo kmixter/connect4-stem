@@ -293,3 +293,36 @@ TEST_F(MaxBotTest, TestFindNextMoveOnOneBoardWithAlphaBeta) {
   ASSERT_TRUE(s != nullptr);
   EXPECT_EQ(expected, s->heuristic);
 }
+
+TEST_F(MaxBotTest, TestVsGameSolverOrg) {
+  // This sequence of red (maxbot) then yellow (gamesolver)
+  // moves.
+  int expected_red_yellow_moves[] = {
+    3, 3, 3, 3, 2, 1, 5, 4, 4, 4, 5, 4, 3, 1, 0, 4, 0, 4
+  };
+  int len = sizeof(expected_red_yellow_moves) / sizeof(int);
+  SimpleObserver o;
+  for (int i = 0; i < len; ++i) {
+    if (i % 2 == 0) {
+      // Try with regular minimax algorithm.
+      ResetBot(kRedDisc, 4, false);
+      bot_->FindNextMove(&b_, &o);
+      ASSERT_TRUE(o.success);
+      EXPECT_EQ(expected_red_yellow_moves[i], o.column);
+
+      // Now try with alphabeta pruning.
+      ResetBot(kRedDisc, 4, true);
+      bot_->FindNextMove(&b_, &o);
+      ASSERT_TRUE(o.success);
+      ASSERT_TRUE(o.success);
+      EXPECT_EQ(expected_red_yellow_moves[i], o.column);
+
+      // Finally add the expected piece.
+      ASSERT_TRUE(b_.Add(expected_red_yellow_moves[i],
+                         kRedDisc));
+    } else {
+      ASSERT_TRUE(b_.Add(expected_red_yellow_moves[i],
+                         kYellowDisc));
+    }
+  }
+}

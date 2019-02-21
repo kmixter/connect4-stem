@@ -55,11 +55,23 @@ int MaxBot::ComputeHeuristic(Board* b) const {
   return value;
 }
 
+class UnAdder {
+ public:
+  UnAdder(Board* b, int column) : b_(b), column_(column) {}
+  ~UnAdder() {
+    b_->UnAdd(column_);
+  }
+
+ private:
+  Board* b_;
+  int column_;
+};
+
 bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
                           int lookahead, int max_alternative,
                           int min_alternative, int* out_column, int* out_value) {
-  int extreme_value = 0;
-  int extreme_column = 0;
+  *out_value = 0;
+  *out_column = 0;
   bool one_considered = false;
   bool is_min = disc == kYellowDisc;
 
@@ -71,13 +83,18 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
     state_.moves[lookahead] = col;
     if (!b->Add(col, disc, &row))
       continue;
+    UnAdder unadder(b, col);
+
     //printf("%d: Trying column %d, disc %d:\n", lookahead, col, disc);
     //printf("%s\n", b->ToString().c_str());
-    bool just_won = b->FindMaxStreakAt(row, col) >= 4;
-    if (just_won) {
+    if (b->FindMaxStreakAt(row, col) >= 4) {
       // This player just won, do not bother recursing.
-      value = disc == kRedDisc ? kMaxHeuristic : -kMaxHeuristic;
-    } else if (lookahead > 0) {
+      *out_value = disc == kRedDisc ? kMaxHeuristic : -kMaxHeuristic;
+      *out_column = col;
+      return true;
+    }
+
+    if (lookahead > 0) {
       int opponent_col;
       if (!FindBestMove(b, o, b->GetOpposite(disc), lookahead,
                         max_alternative, min_alternative, &opponent_col,
@@ -93,18 +110,20 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
       state_.heuristic = value;
       if (!o->Observe(&state_)) {
         interrupted_ = true;
+        return false;
       }
     }
-    b->UnAdd(col);
+
     //if (lookahead >= 0) printf("%d: value %d\n", lookahead, value);
     if (!one_considered ||
-        (is_min && value < extreme_value) ||
-        (!is_min && value > extreme_value)) {
+        (is_min && value < *out_value) ||
+        (!is_min && value > *out_value)) {
       one_considered = true;
-      extreme_value = value;
-      extreme_column = col;
-      //if (lookahead >= 0) printf("%d: new extreme c%d, %d\n", lookahead, col, value);
+      *out_value = value;
+      *out_column = col;
+      //if (lookahead >= 0) printf("%d: new *out c%d, %d\n", lookahead, col, value);
     }
+
     if (use_alphabeta_) {
       bool prune = false;
       if (is_min) {
@@ -136,21 +155,13 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
           // Interruption during this observation, like any
           // other during this recursion
           interrupted_ = true;
+          return false;
         }
-        *out_column = extreme_column;
-        *out_value = extreme_value;
         return true;
       }
     }
-    // If this player can win by this move, no other move can be better.
-    if (just_won || interrupted_)
-      break;
   }
-  if (!one_considered || interrupted_) return false;
-
-  *out_column = extreme_column;
-  *out_value = extreme_value;
-  return true;
+  return one_considered;
 }
 
 void MaxBot::FindNextMove(Board* b, Observer* o) {
