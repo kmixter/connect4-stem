@@ -31,6 +31,9 @@ class DropperController {
 	int GetClosestColumn() const;
 
  private:
+  void MoveServoToUnload(bool unloading);
+  void DetachServo();
+
   Adafruit_MotorShield motors_;
   Adafruit_StepperMotor* stepper_;
   Servo servo_;

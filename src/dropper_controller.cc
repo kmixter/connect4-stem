@@ -14,6 +14,7 @@ const int kStepsBetweenColumns = 170;
 const int kDropTimeoutMs = 1000;
 const int kErrorTimeoutMs = 5000;
 const int kDropDebounceTimeoutMs = 200;
+const int kServoRotateTimeMs = 200;
 const int kStepMax = kStepsAtColumn0 + 7 * kStepsBetweenColumns;
 
 DropperController::DropperController() : input_(nullptr), current_step_(-1) {
@@ -21,7 +22,7 @@ DropperController::DropperController() : input_(nullptr), current_step_(-1) {
 
 void DropperController::Reset() {
   current_step_ = -1;
-  servo_.write(kServoLoadingAngle);
+  MoveServoToUnload(false);
 }
 
 void DropperController::Initialize(InputManager* input) {
@@ -33,8 +34,16 @@ void DropperController::Initialize(InputManager* input) {
   stepper_->setSpeed(10);  // 10 RPM
   stepper_->release();
 
-  servo_.attach(kServoOutput);
   Reset();
+}
+
+void DropperController::MoveServoToUnload(bool unloading) {
+  servo_.attach(kServoOutput);
+  servo_.write(unloading ? kServoUnloadingAngle : kServoLoadingAngle);
+}
+
+void DropperController::DetachServo() {
+  servo_.detach();
 }
 
 bool DropperController::MoveToStep(int target_step) {
@@ -127,7 +136,7 @@ bool DropperController::DropAndWait() {
     Serial.println("Cannot drop when not aligned");
     return false;
   }
-  servo_.write(kServoUnloadingAngle);
+  MoveServoToUnload(true);
   stepper_->release();
 
   unsigned long start_ms = millis();
@@ -153,7 +162,9 @@ bool DropperController::DropAndWait() {
     Serial.println("Consumed interrupter bounce");
   }
 
-  servo_.write(kServoLoadingAngle);
+  MoveServoToUnload(false);
+  delay(kServoRotateTimeMs);
+  DetachServo();
 
   return found;
 }
