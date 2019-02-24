@@ -11,11 +11,13 @@ class MaxBotTest : public testing::Test {
  protected:
   void SetUp() override {
     prng_.reset(new NotAtAllRandom(0));
-    ResetBot(kRedDisc, 4);
+    ResetBot(kRedDisc, 4, false);
   }
 
-  void ResetBot(CellContents disc, int lookahead) {
-    bot_.reset(new MaxBot(disc, lookahead, prng_.get()));    
+  void ResetBot(CellContents disc, int lookahead,
+                bool use_lookahead) {
+    bot_.reset(new MaxBot(disc, lookahead, prng_.get(),
+                          use_lookahead));
   }
 
   Board b_;
@@ -219,20 +221,20 @@ class RecordingObserver : public SimpleObserver {
       for (int j = 0; j < i.depth; ++j)
         printf("%d -> ", i.moves[j]);
       switch (i.kind) {
-        case kMoveDone:
-          printf("MoveDone");
-          break;
-        case kHeuristicDone:
-          printf("HeuristicDone");
-          break;
-        case kParentDone:
-          printf("ParentDone");
-          break;
-        case kNoMovePossible:
-          printf("NoMovePossible");
-          break;
+       case kHeuristicDone:
+        printf("HeuristicDone ");
+        break;
+       case kAlphaBetaPruneDone:
+        printf("AlphaBetaPruneDone ");
+        break;
+       case kMoveDone:
+        printf("MoveDone ");
+        break;
+       case kNoMovePossible:
+        printf("NoMovePossible ");
+        break;
       }
-      printf(" %ld\n", i.heuristic);
+      printf("%ld\n", i.heuristic);
     }      
   }
 
@@ -249,11 +251,11 @@ TEST_F(MaxBotTest, TestFindNextMoveOnOneBoard) {
                                "_ Y R R _ _ _\n"));
 
   RecordingObserver o;
-  ResetBot(kRedDisc, 2);
+  ResetBot(kRedDisc, 2, false);
   bot_->FindNextMove(&b_, &o);
   ASSERT_TRUE(o.success);
   EXPECT_EQ(4, o.column);
-  EXPECT_EQ(7 * 7U + 7 /* ParentDones */ + 1 /* MoveDone */, o.states.size());
+  EXPECT_EQ(7 * 7U + 1, o.states.size());
   b_.Add(4, kRedDisc);
   b_.Add(5, kYellowDisc);
   int expected = bot_->ComputeHeuristic(&b_);
@@ -273,6 +275,130 @@ TEST_F(MaxBotTest, DoNotTaunt) {
                                "Y _ R R R _ _\n"));
   RecordingObserver o;
   bot_->FindNextMove(&b_, &o);
-  o.Dump();
   EXPECT_EQ(1, o.column);
+}
+
+TEST_F(MaxBotTest, TestFindNextMoveOnOneBoardWithAlphaBeta) {
+  ASSERT_TRUE(b_.SetFromString("_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ _ _ _ _ _\n"
+                               "_ _ Y _ _ _ _\n"
+                               "_ Y R R _ _ _\n"));
+
+  RecordingObserver o;
+  ResetBot(kRedDisc, 2, true);
+  bot_->FindNextMove(&b_, &o);
+  ASSERT_TRUE(o.success);
+  EXPECT_EQ(4, o.column);
+  // There are 3 alpha-beta prunings:
+  // 1) column 2 is worse than 1, discovered at 1 (prune 5)
+  // 2) column 3 is worse than 1, discovered at 3 (prune 3)
+  // 3) column 6 is worse than 5, discovered at 1 (prune 5)
+  EXPECT_EQ(7 * 7U + 1 - 5 - 3 - 5 + 3, o.states.size());
+  b_.Add(4, kRedDisc);
+  b_.Add(5, kYellowDisc);
+  int expected = bot_->ComputeHeuristic(&b_);
+  EXPECT_EQ(expected, o.heuristic);
+  int search[] = {4, 5};
+  auto s = o.Find(2, search);
+  ASSERT_TRUE(s != nullptr);
+  EXPECT_EQ(expected, s->heuristic);
+}
+
+// This sequence of red (maxbot) then yellow (gamesolver)
+// moves.
+int kExpectedRedYellowMoves[] = {
+  3, 3, 3, 3, 2, 1, 5, 4, 4, 4, 5, 4, 3, 1, 0, 4, 4, 0, 0
+};
+
+TEST_F(MaxBotTest, TestVsGameSolverOrg) {
+  int len = sizeof(kExpectedRedYellowMoves) / sizeof(int);
+  for (int i = 0; i < len; ++i) {
+    RecordingObserver o;
+    if (i % 2 == 0) {
+      // Try with regular minimax algorithm.
+      ResetBot(kRedDisc, 4, false);
+      bot_->FindNextMove(&b_, &o);
+      ASSERT_TRUE(o.success);
+      EXPECT_EQ(kExpectedRedYellowMoves[i], o.column);
+
+      // Now try with alphabeta pruning.
+      ResetBot(kRedDisc, 4, true);
+      bot_->FindNextMove(&b_, &o);
+      ASSERT_TRUE(o.success);
+      ASSERT_TRUE(o.success);
+      EXPECT_EQ(kExpectedRedYellowMoves[i], o.column);
+
+      // Finally add the expected piece.
+      ASSERT_TRUE(b_.Add(kExpectedRedYellowMoves[i],
+                         kRedDisc));
+    } else {
+      ASSERT_TRUE(b_.Add(kExpectedRedYellowMoves[i],
+                         kYellowDisc));
+    }
+  }
+}
+
+class MaxBotConstantEvalTest : public testing::Test {
+ protected:
+  void SetUp() override {
+    prng_.reset(new NotAtAllRandom(0));
+    ResetBot(kRedDisc, 2500, false);
+  }
+
+  void ResetBot(CellContents disc, int max_evals,
+                bool use_alphabeta) {
+    bot_.reset(new MaxBotConstantEvals(disc, max_evals, prng_.get(),
+                                       use_alphabeta));
+  }
+
+  void FillColumn(int column) {
+    while (b_.Add(column, kRedDisc));
+  }
+
+  Board b_;
+  std::unique_ptr<MaxBotConstantEvals> bot_;
+  std::unique_ptr<PRNG> prng_;
+};
+
+TEST_F(MaxBotConstantEvalTest, ComputeDepth) {
+  ResetBot(kRedDisc, 2500, false);
+  EXPECT_EQ(4, bot_->ComputeDepth(&b_));
+
+  FillColumn(0);
+  EXPECT_EQ(4, bot_->ComputeDepth(&b_));
+
+  FillColumn(1);
+  EXPECT_EQ(4, bot_->ComputeDepth(&b_));
+
+  FillColumn(2);
+  EXPECT_EQ(5, bot_->ComputeDepth(&b_));
+
+  FillColumn(3);
+  EXPECT_EQ(7, bot_->ComputeDepth(&b_));
+
+  FillColumn(4);
+  EXPECT_EQ(11, bot_->ComputeDepth(&b_));
+
+  FillColumn(5);
+  EXPECT_EQ(11, bot_->ComputeDepth(&b_));
+}
+
+TEST_F(MaxBotConstantEvalTest, TestVsGameSolverOrg) {
+  int len = sizeof(kExpectedRedYellowMoves) / sizeof(int);
+  SimpleObserver o;
+  for (int i = 0; i < len; ++i) {
+    if (i % 2 == 0) {
+      ResetBot(kRedDisc, 2500, true);
+      bot_->FindNextMove(&b_, &o);
+      ASSERT_TRUE(o.success);
+      EXPECT_EQ(kExpectedRedYellowMoves[i], o.column);
+      ASSERT_TRUE(b_.Add(kExpectedRedYellowMoves[i],
+                         kRedDisc));
+    } else {
+      ASSERT_TRUE(b_.Add(kExpectedRedYellowMoves[i],
+                         kYellowDisc));
+    }
+  }
 }

@@ -59,10 +59,23 @@ int MaxBot::ComputeHeuristic(Board* b) const {
   return value;
 }
 
+class UnAdder {
+ public:
+  UnAdder(Board* b, int column) : b_(b), column_(column) {}
+  ~UnAdder() {
+    b_->UnAdd(column_);
+  }
+
+ private:
+  Board* b_;
+  int column_;
+};
+
 bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
-                          int lookahead, int* out_column, int* out_value) {
-  int extreme_value = 0;
-  int extreme_column = 0;
+                          int lookahead, int max_alternative,
+                          int min_alternative, int* out_column, int* out_value) {
+  *out_value = 0;
+  *out_column = 0;
   bool one_considered = false;
   bool is_min = disc == kYellowDisc;
 
@@ -75,54 +88,93 @@ bool MaxBot::FindBestMove(Board* b, Observer* o, CellContents disc,
     *move_pointer = col;
     if (!b->Add(col, disc, &row))
       continue;
+    UnAdder unadder(b, col);
+
     //printf("%d: Trying column %d, disc %d:\n", lookahead, col, disc);
     //printf("%s\n", b->ToString().c_str());
-    bool just_won = b->FindMaxStreakAt(row, col) >= 4;
-    if (just_won) {
-      // This player just won, do not bother recursing. Give max heuristic,
-      // with offset based on how far ahead this win/loss is (so if win/loss
-      // is inevitable we choose fewest moves to it.)
-      value = (disc == kRedDisc ? 1 : -1) *
+    if (b->FindMaxStreakAt(row, col) >= 4) {
+      // This player just won, do not bother recursing.
+      *out_value = (disc == kRedDisc ? 1 : -1) *
         (kMaxHeuristic - (lookahead_ - lookahead));
+      *out_column = col;
       state_.kind = PlayerBot::Observer::kHeuristicDone;
-     } else if (lookahead > 0) {
+      state_.depth = lookahead_ - lookahead;
+      state_.heuristic = *out_value;
+      if (!o->Observe(&state_)) {
+        return false;
+      }
+      return true;
+    }
+
+    if (lookahead > 0) {
       int opponent_col;
       if (!FindBestMove(b, o, b->GetOpposite(disc), lookahead,
-                        &opponent_col, &value)) {
+                        max_alternative, min_alternative, &opponent_col,
+                        &value)) {
         // No available move, aka tie reached. So call this value 0. 
         value = 0;
       }
-      state_.kind = PlayerBot::Observer::kParentDone;
     } else {
       // lookahead = 0
       value = ComputeHeuristic(b);
       state_.kind = PlayerBot::Observer::kHeuristicDone;
       //printf("Heuristic is %d\n", value);
+      state_.depth = lookahead_ - lookahead;
+      state_.heuristic = value;
+      if (!o->Observe(&state_)) {
+        interrupted_ = true;
+        return false;
+      }
     }
-    state_.depth = lookahead_ - lookahead;
-    state_.heuristic = value;
-    if (!o->Observe(&state_)) {
-      interrupted_ = true;
-    }
-    b->UnAdd(col);
+
     //if (lookahead >= 0) printf("%d: value %d\n", lookahead, value);
     if (!one_considered ||
-        (is_min && value < extreme_value) ||
-        (!is_min && value > extreme_value)) {
+        (is_min && value < *out_value) ||
+        (!is_min && value > *out_value)) {
       one_considered = true;
-      extreme_value = value;
-      extreme_column = col;
-      //if (lookahead >= 0) printf("%d: new extreme c%d, %d\n", lookahead, col, value);
+      *out_value = value;
+      *out_column = col;
+      //if (lookahead >= 0) printf("%d: new *out c%d, %d\n", lookahead, col, value);
     }
-    // If this player can win by this move, no other move can be better.
-    if (just_won || interrupted_)
-      break;
-  }
-  if (!one_considered || interrupted_) return false;
 
-  *out_column = extreme_column;
-  *out_value = extreme_value;
-  return true;
+    if (use_alphabeta_) {
+      bool prune = false;
+      if (is_min) {
+        if (value < min_alternative) {
+          //printf("%d: min_alternative was %d now %d\n", lookahead,
+          //       min_alternative, value);
+          min_alternative = value;
+        }
+        // If this option results in a value less than what
+        // maxifying player already has as an alternative,
+        // prune this tree.
+        prune = value < max_alternative;
+      } else {
+        if (value > max_alternative) {
+          //printf("%d: max_alternative was %d now %d\n", lookahead,
+          //       max_alternative, value);
+          max_alternative = value;
+        }
+        // If this option results in a value greater than what
+        // minifying player already has as an alternative,
+        // prune this tree.
+        prune = value > min_alternative;
+      }
+      //printf("!# alternative range: (%d,%d)\n", min_alternative, max_alternative);
+      if (prune) {
+        state_.kind = PlayerBot::Observer::kAlphaBetaPruneDone;
+        state_.heuristic = value;
+        if (!o->Observe(&state_)) {
+          // Interruption during this observation, like any
+          // other during this recursion
+          interrupted_ = true;
+          return false;
+        }
+        return true;
+      }
+    }
+  }
+  return one_considered;
 }
 
 void MaxBot::FindNextMove(Board* b, Observer* o) {
@@ -133,7 +185,10 @@ void MaxBot::FindNextMove(Board* b, Observer* o) {
   state_.moves = moves_;
   state_.depth = lookahead_;
   interrupted_ = false;
-  if (!FindBestMove(b, o, my_disc_, lookahead_, &column, &value)) {
+  int max_alternative = -kMaxHeuristic;  // aka alpha
+  int min_alternative = kMaxHeuristic;   // aka beta
+  if (!FindBestMove(b, o, my_disc_, lookahead_, max_alternative,
+                    min_alternative, &column, &value)) {
     if (!interrupted_) {
       state_.kind = PlayerBot::Observer::kNoMovePossible;
       o->Observe(&state_);
@@ -144,4 +199,29 @@ void MaxBot::FindNextMove(Board* b, Observer* o) {
     state_.heuristic = value;
     o->Observe(&state_);
   }
+}
+
+int MaxBotConstantEvals::ComputeDepth(Board* b) {
+  int branch_factor = 0;
+  for (int i = 0; i < 7; ++i) {
+    if (b->Add(i, kRedDisc)) {
+      b->UnAdd(i);
+      ++branch_factor;
+    }
+  }
+
+  int predicted_evals = 1;
+  int depth;
+  for (depth = 1; depth <= kMaxLookahead; ++depth) {
+    predicted_evals *= branch_factor;
+    if (predicted_evals > max_evals_)
+      break;
+  }
+
+  return depth - 1;
+}
+
+void MaxBotConstantEvals::FindNextMove(Board* b, Observer* o) {
+  lookahead_ = ComputeDepth(b);
+  MaxBot::FindNextMove(b, o);
 }
