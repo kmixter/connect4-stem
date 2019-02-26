@@ -237,6 +237,10 @@ BotResult HandleKeyDuringBotTurn(Board* b, InputEvent* e,
           }
           return kBotTurnUserDoOver;
         }
+      } else {
+        if (AskYesNo(g_string)) {
+
+        }
       }
       if (AskYesNo(kExitGameEarly)) {
         return kBotSignalExit;
@@ -455,15 +459,17 @@ void RunGame(PlayerBot* bot) {
     ShowMessage("This bot isn't ready");
     return;
   }
-  strcpy(g_string, "You're against ");
-  strcat(g_string, bot->GetName());
-  strcat(g_string, ". Ready?");
-  if (!AskYesNo(g_string)) {
-    return;
-  }
   if (!AskYesNo("Is board empty and latched?")) {
     ShowMessage("Empty the board first.");
     return;
+  }
+  strcpy(g_string, "Robot ");
+  strcat(g_string, bot->GetName());
+  strcat(g_string, " can go first?");
+
+  bool robot_turn = true;
+  if (!AskYesNo(g_string)) {
+    robot_turn = false;
   }
 
   Board b;
@@ -471,29 +477,33 @@ void RunGame(PlayerBot* bot) {
   UserMove user_move;
 
   while (true) {
-    BotResult bot_result = HandleBotTurn(&b, bot, kRedDisc, &user_move);
+    if (robot_turn) {
+      BotResult bot_result = HandleBotTurn(&b, bot, kRedDisc, &user_move);
 
-    if (bot_result == kBotSignalExit)
-      break;
+      if (bot_result == kBotSignalExit)
+        break;
 
-    if (b.IsTerminal(&is_draw)) {
-      if (is_draw)
-        ShowDraw();
-      else
-        ShowBotWins(bot, &b);
-      return;
+      if (b.IsTerminal(&is_draw)) {
+        if (is_draw)
+          ShowDraw();
+        else
+          ShowBotWins(bot, &b);
+        return;
+      }
+
+    } else {
+      if (!HandleUserTurn(&b, bot, kYellowDisc, &user_move))
+        return;
+
+      if (b.IsTerminal(&is_draw)) {
+        if (is_draw)
+          ShowDraw();
+        else
+          ShowUserWins(&b);
+        return;
+      }
     }
-
-    if (!HandleUserTurn(&b, bot, kYellowDisc, &user_move))
-      return;
-
-    if (b.IsTerminal(&is_draw)) {
-      if (is_draw)
-        ShowDraw();
-      else
-        ShowUserWins(&b);
-      return;
-    }
+    robot_turn = !robot_turn;
   }
 }
 
@@ -531,6 +541,24 @@ int main(void) {
   init();
   setup();
 
+  struct QuestionBot {
+    const char* question;
+    PlayerBot* bot;
+  } question_bot[] = {
+    {
+      "Do you want to go easy?",
+      &g_randombot
+    }, {
+      "Do you want to go medium?",
+      &g_rule3bot
+    }, {
+      "Do you want to go hard?",
+      &g_maxbot
+    }
+  };
+  int question = 0;
+  int num_questions = sizeof(question_bot) / sizeof(question_bot[0]);
+
   while (true) {
     YesNoResponse yn = AskYesNo("Do you want to play?", false, true);
     if (yn == kYesNoResponseYes) {
@@ -538,13 +566,15 @@ int main(void) {
       g_prng.SetSeed(seed);
       Serial.print("Setting PRNG seed to ");
       Serial.println(seed);
-      if (AskYesNo("Do you want to go easy?")) {
-        RunGame(&g_randombot);
-      } else if (AskYesNo("Do you want to go medium?")) {
-        RunGame(&g_rule3bot);
-      } else if (AskYesNo("Do you want to go hard?")) {
-        RunGame(&g_maxbot);
-      }
+      int start_question = question;
+      do {
+        if (AskYesNo(question_bot[question].question)) {
+          RunGame(question_bot[question].bot);
+          break;
+        } else {
+          question = (question + 1) % num_questions;
+        }
+      } while (question != start_question);
     } else if (yn == kYesNoResponseNo) {
       ShowMessage("Sorry, I don't know any jokes.");
     } else if (yn == kYesNoResponseBothButtons) {
