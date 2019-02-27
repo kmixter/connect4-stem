@@ -39,17 +39,16 @@ These are the parts for the gantry dropper mechanism above the board:
 * [2x belt clamp](parts/PatrickMcCabe/Belt Clamp.STL)
 * [gantry slider top](parts/PatrickMcCabe/Slider Top.STL)
 * [2x bearing block](parts/PatrickMcCabe/Bearing Block.STL)
-* Funnel
-* Combined idler and post
-* Disc funnel
-* Disc shooter
-* Disc hopper
-* Slider top
+* [Motor mount](parts/PatrickMcCabe/Motor Mount.STL)
+* [Combined idler and post](parts/combined-idler-post.stl)
+* [Disc Funnel](parts/PatrickMcCabe/Slider Spacer Front.STL)
+* [Servo Releaser](parts/thinner-servo-releaser.stl)
+* [Disc hopper](parts/taller-gantry-hopper.stl)
 
 To build the gantry, which is the slider that slides across the top of
 the board and drops discs into the board:
 
-* Connect the stepper motor to the motor mount with screws.
+* Connect the stepper motor to the Motor Mount with screws.
 * Connect the motor mount to the 15" C channel in the second to left-most
   screw holes.
 * Insert the bearings into the two bearing blocks. This is a very tight
@@ -136,13 +135,13 @@ Next the feet and slide should be printed and attached to the board.
 
 Print these parts:
 
-* back-right foot
-* back-left battery-holder foot
-* front-left controller foot
-* front-right hopper-foot
-* controller top
-* Slide left
-* Slide right
+* [back-right foot](parts/foot.stl)
+* [back-left battery-holder foot](parts/battery-foot.stl)
+* [front-left controller foot](parts/controller-foot.stl)
+* [front-right hopper-foot](parts/hopper-foot.stl)
+* [controller top](parts/controller-top.stl)
+* [Slide left](parts/slide-left.stl)
+* [Slide right](parts/slide-right.stl)
 
 Use acetone to weld the slide left and slide right pieces together into one
 large 25cm wide piece.
@@ -185,8 +184,8 @@ At this point the base is stable enough to put the gantry on the board.
 
 These are the parts for connecting the gantry to the board:
 
-* Left gantry connector
-* Right gantry connector
+* [Left gantry connector](parts/gantry-connector-left.stl)
+* [Right gantry connector](parts/gantry-connector-right.stl)
 
 To attach the gantry to the board:
 
@@ -209,8 +208,8 @@ Arduino, motor boards, and mounting them in their enclosure.
 
 These are the parts for the enclosure
 
-* Arduino enclosure bottom
-* Arduino enclosure top
+* [Arduino enclosure bottom](parts/arduino-enclosure-bottom.stl)
+* [Arduino enclosure top](parts/arduino-enclosure-top.stl)
 
 Screw the enclosure bottom into the left leg of the connect4 board, positioning
 it slightly (~ 1/4 inch) below the left gantry connector. There should be a
