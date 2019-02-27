@@ -20,7 +20,7 @@ This repository is the software and 3D part source for a "Connect-4" STEM projec
 * Purchase [red](https://www.adafruit.com/product/1445) and [green](https://www.adafruit.com/product/1504) momentary pushbuttons for $2
 * Purchase 7 330ohm 1/4w resistors
 * Purchase a micro-switch
-* Purchase a battery mount
+* Purchase a [battery and charger](https://www.overstock.com/Emergency-Preparedness/Large-Capacity-9800MAH-DC12V-Portable-Rechargeable-Li-ion-Battey-Pack/17432557/product.html?cid=273569&ehid=B6C9DCA0B72C1C57E040010A239C3C94&fp=f&token=273569-2735692019012215481894286427331070117747080812-1-f8cae0&utm_campaign=t_20160908_shipconf&utm_medium=email&utm_source=strongview) for $30
 
 * You will need a 3D printer and filament. We used ABS, though presumably PLA also works.
 * You will also want wood screws of various sizes and metal bolt/nut combos, mostly of 3mm size.
