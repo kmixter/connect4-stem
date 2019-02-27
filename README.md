@@ -34,6 +34,7 @@ volume. We used ABS filament for durability and easy in welding pieces
 together with acetone. No acrylic parts are needed.
 
 These are the parts for the gantry dropper mechanism above the board:
+
 * [gantry hopper holder](parts/PatrickMcCabe/Piece Holder.STL)
 * [2x belt clamp](parts/PatrickMcCabe/Belt Clamp.STL)
 * [gantry slider top](parts/PatrickMcCabe/Slider Top.STL)
@@ -47,6 +48,7 @@ These are the parts for the gantry dropper mechanism above the board:
 
 To build the gantry, which is the slider that slides across the top of
 the board and drops discs into the board:
+
 * Connect the stepper motor to the motor mount with screws.
 * Connect the motor mount to the 15" C channel in the second to left-most
   screw holes.
@@ -133,6 +135,7 @@ transition from the funnel, past photo-interrupter, into the board.
 Next the feet and slide should be printed and attached to the board.
 
 Print these parts:
+
 * back-right foot
 * back-left battery-holder foot
 * front-left controller foot
@@ -181,10 +184,12 @@ towards the controller foot.
 At this point the base is stable enough to put the gantry on the board.
 
 These are the parts for connecting the gantry to the board:
+
 * Left gantry connector
 * Right gantry connector
 
 To attach the gantry to the board:
+
 * Align the connectors to the very top of the wooden legs of the Connect-4 board.
 * Level both the left and right connectors.
 * Carefully align the gantry with the top of the board. Several things to keep
@@ -203,6 +208,7 @@ Now that the gantry and feet are connected, the final step is wiring up the
 Arduino, motor boards, and mounting them in their enclosure.
 
 These are the parts for the enclosure
+
 * Arduino enclosure bottom
 * Arduino enclosure top
 
@@ -215,6 +221,7 @@ If you received the same adafruit motor board, the motor board needs to have
 stacking connectors soldered to it. Solder these connectors.
 
 We are going to need to modify the motor board for three more reasons:
+
 * The display also needs to share the I2C bus and VCC and GND with the motor board
 * The controller buttons need to be connected to GPIOs.
 * The gantry also needs to share the VCC and GND with the motor board.
@@ -262,12 +269,16 @@ ADIR variable into the make command.
 You will need to have installed host compiler tools such as g++ and terminal
 emulator picoterm.
 
+```
 $ sudo apt-get install g++ picoterm
+```
 
 Now begin to build:
 
+```
 $ cd $HOME/prj/connect4-stem/src
 $ make
+```
 
 Note that this makefile uses the Arduino SDK command-line tools directly.
 Using .ino and .dce files is convenient for beginners using Arduino GUI.
@@ -282,10 +293,13 @@ only be built if the unit tests succeed (which they should in any clean
 checkout).
 
 To first run code on Arduino, do the follow:
+
 * Make sure your host computer is connected to Arduino by USB
 * Make sure battery is charged and plugged into Arduino and turned on.
 
+```
 $ make run
+```
 
 The code will be built and flashed to the Arduino. The make command will now
 run picoterm to show serial output from the code.
