@@ -469,7 +469,7 @@ void RunGame(PlayerBot* bot) {
     return;
   }
 
-  bool robot_turn = !AskYesNo("Do you want to go first?");
+  bool robot_turn = AskYesNo("Can I go first?");
 
   Board b;
   bool is_draw;
