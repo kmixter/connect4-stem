@@ -43,6 +43,8 @@ class Board {
     return contents_[row][column];
   }
 
+  int GetCount() const;
+
   static CellContents GetOpposite(CellContents c) {
     if (c == kRedDisc) return kYellowDisc;
     if (c == kYellowDisc) return kRedDisc;

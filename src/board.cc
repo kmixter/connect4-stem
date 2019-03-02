@@ -83,6 +83,13 @@ const char* Board::GetContentsName(CellContents disc) {
 }
 #endif  // TESTING
 
+int Board::GetCount() const {
+  int count = 0;
+  for (int i = 0; i < 7; ++i)
+    count += top_contents_[i] + 1;
+  return count;
+}
+
 bool Board::Add(int column, CellContents disc, int* out_row) {
   if (top_contents_[column] == 5) return false;
   ++top_contents_[column];

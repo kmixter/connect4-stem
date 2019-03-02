@@ -21,6 +21,10 @@ TEST_F(BoardTest, InitialState) {
             "_ _ _ _ _ _ _\n", b_.ToString());
 }
 
+TEST_F(BoardTest, GetCountEmpty) {
+  EXPECT_EQ(0, b_.GetCount());
+}
+
 TEST_F(BoardTest, ErrorRequests) {
   EXPECT_EQ((int)kError, (int)b_.Get(-1, 0));
   EXPECT_EQ((int)kError, (int)b_.Get(0, -1));
@@ -59,6 +63,7 @@ TEST_F(BoardTest, AddOneYellowOkWithOutRow) {
             "_ _ _ _ _ _ _\n"
             "_ _ _ Y _ _ _\n", b_.ToString());
   EXPECT_EQ(0, row);
+  EXPECT_EQ(1, b_.GetCount());
 }
 
 TEST_F(BoardTest, StackTest) {
@@ -263,6 +268,7 @@ TEST_F(BoardTest, IsTerminalDraw) {
                                "Y R Y R Y R Y\n"
                                "Y R Y R Y R Y\n"
                                "Y R Y R Y R Y\n"));
+  EXPECT_EQ(41, b_.GetCount());
 
   ASSERT_FALSE(b_.IsTerminal(&is_draw));
 

@@ -22,7 +22,6 @@ DropperController g_dropper;
 
 const unsigned long kUserSwitchColumnTimeoutMs = 2000;
 static const char kExitGameEarly[] = "End game early?";
-static const char kYourTurn[] = "Your turn!";
 
 DisplayController g_display;
 char g_string[64];
@@ -373,12 +372,19 @@ BotResult HandleBotTurn(Board* b, PlayerBot* bot, CellContents disc,
   return kBotMoved;
 }
 
+void ShowUserPrompt(Board* b) {
+  if (b->GetCount() == 0) {
+    g_display.Show("You go first.");
+  } else {
+    g_display.Show("Your turn!", true);
+  }
+  g_display.UpdateBoardBitmap(b->GetBitmap());
+}
+
 bool HandleUserTurn(Board* b, PlayerBot* bot, CellContents disc, UserMove* user_move) {
   InputEvent e;
   DumpBoardToSerial(b, "Your board");
-  g_display.Show(kYourTurn, true);
-  g_display.UpdateBoardBitmap(b->GetBitmap());
-
+  ShowUserPrompt(b);
   user_move->Reset();
 
   while (!user_move->IsSet()) {
@@ -401,8 +407,7 @@ bool HandleUserTurn(Board* b, PlayerBot* bot, CellContents disc, UserMove* user_
       case kHomeSwitchKey:
         if (AskYesNo(kExitGameEarly))
           return false;
-        g_display.Show(kYourTurn, true);
-        g_display.UpdateBoardBitmap(b->GetBitmap());
+        ShowUserPrompt(b);
         break;
 
       case kColumn0Key:
@@ -463,14 +468,8 @@ void RunGame(PlayerBot* bot) {
     ShowMessage("Empty the board first.");
     return;
   }
-  strcpy(g_string, "Robot ");
-  strcat(g_string, bot->GetName());
-  strcat(g_string, " can go first?");
 
-  bool robot_turn = true;
-  if (!AskYesNo(g_string)) {
-    robot_turn = false;
-  }
+  bool robot_turn = !AskYesNo("Do you want to go first?");
 
   Board b;
   bool is_draw;
