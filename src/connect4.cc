@@ -506,7 +506,7 @@ void RunGame(PlayerBot* bot) {
   }
 }
 
-void RunTest() {
+void RunDropperTest() {
   g_display.Show("Here it goes...");
   for (int i = 0; i < 7; ++i) {
     InputEvent e;
@@ -534,6 +534,48 @@ void RunTest() {
     }
   }
   ShowMessage("Test passed!");
+}
+
+void RunInputTest() {
+  g_display.Show("Push button or put disc in column");
+  while (g_input.GetCurrentState() != ((1<<kYesButtonKey) | (1<<kNoButtonKey))) {
+    InputEvent e;
+    bool is_photointerrupter = false;
+    yield();
+    if (!g_input.Get(&e))
+      continue;
+    switch (e.key) {
+     case kYesButtonKey:
+      strcpy(g_string, "Yes button");
+      break;
+     case kNoButtonKey:
+      strcpy(g_string, "No button");
+      break;
+     case kColumn0Key:
+     case kColumn1Key:
+     case kColumn2Key:
+     case kColumn3Key:
+     case kColumn4Key:
+     case kColumn5Key:
+     case kColumn6Key:
+     case kKeyMax: // To avoid warning
+      strcpy(g_string, "Column X");
+      g_string[7] = 'A' + (int(e.key) - int(kColumn0Key));
+      is_photointerrupter = true;
+      break;
+     case kHomeSwitchKey:
+      strcpy(g_string, "Home switch");
+      break;
+    }
+    if (e.kind == kKeyDown)
+      strcat(g_string, is_photointerrupter ? " blocked" : " down");
+    else
+      strcat(g_string, is_photointerrupter ? " clear  " : " up  ");
+    g_display.Show(g_string);
+  }
+  g_display.Show("Exiting");
+  delay(2000);
+  g_input.Flush();
 }
 
 int main(void) {
@@ -578,7 +620,9 @@ int main(void) {
       ShowMessage("Sorry, I don't know any jokes.");
     } else if (yn == kYesNoResponseBothButtons) {
       if (AskYesNo("Run dropper test?"))
-        RunTest();
+        RunDropperTest();
+      else if (AskYesNo("Run input test?"))
+        RunInputTest();
     }
   }
 }
